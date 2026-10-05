@@ -17,7 +17,7 @@ data = load_dataset("{{REPO_ID}}", "mixed")
 row = data["train"][0]
 for span in row["spans"]:
     fragment = row["text"][span["start"]:span["end"]]
-    print(span["label"], span["reported_model"], fragment[:120])
+    print(span["label"], span["reported_model"] or span["requested_model"], fragment[:120])
 ```
 
 If this repository is private, sign in with `hf auth login` or provide your existing read token to the library. Do not place tokens in source files.
@@ -30,19 +30,20 @@ If this repository is private, sign in with `hf auth login` or provide your exis
 
 ## What's included
 
-| Writer | Original batch | ML-paper excerpts | Expansion | Mixed total | Reported identity |
-|---|---:|---:|---:|---:|---|
+{{WRITER_HEADER}}
 {{WRITER_TABLE}}
 
-These are the identities recorded by the generation backends, including the exact reported strings. Opus 3 used a visibly selected browser model; its API checkpoint, revision and sampling parameters were not reported. It must not be silently equated with a particular dated API checkpoint. Modern models ran through Claude Code subscription authentication; Opus 3 ran through Claude's browser UI. There are **no GPT/OpenRouter/open-weight generations in this release**.
+These are the identities recorded by the generation backends. Requested and reported identities remain separate. Opus 3 used a visibly selected browser model; its API checkpoint, revision and sampling parameters were not reported. It must not be silently equated with a particular dated API checkpoint. {{GENERATION_BACKENDS}}
 
-Each source passage is assigned to one writer; the three modern models did not rewrite the same source passage. Some long parent books or reports contribute multiple disjoint excerpts. The original batch includes fiction, encyclopedia/reference text, and professional economic reports. The ML subset contains narrative excerpts, **not full papers**. Its current-Opus examples had already completed before the decision to focus future Opus runs on stories.
+Each source passage is assigned to one writer; different models did not rewrite the same source passage. Some long parent books or reports contribute multiple disjoint excerpts. The original batch includes fiction, encyclopedia/reference text, and professional economic reports. The ML subset contains narrative excerpts, **not full papers**. Its current-Opus examples had already completed before the decision to focus future Opus runs on stories.
 
 ### Version 1.1.0 expansion
 
 The added batch contains 100 new documents each from Haiku, Sonnet and current Opus, plus 300 matched controls, with no additional Opus 3 generation. Opus uses historical-fiction passages only. Haiku and Sonnet each receive 15 Gutenberg passages, 35 Standard Ebooks passages, 25 WikiText passages and 25 Beige Book passages. New excerpt IDs, normalized texts and parent ranges are checked against the previous release. Existing book/author/report split assignments are inherited; the older 1,400 document IDs and text are retained.
 
 The redundant **`source_text_sha256` Parquet column has been removed from every configuration**, including the previous data. Compute it from `source_text` when needed. The full provenance JSONL retains the recorded upstream hashes. The previous v1.0.0 Hub commit remains available as version history.
+
+{{GPT_EXPANSION_SECTION}}
 
 ## Hugging Face configurations and splits
 
@@ -57,12 +58,13 @@ controls = load_dataset("{{REPO_ID}}", "human_controls")
 papers = load_dataset("{{REPO_ID}}", "ml_papers_mixed")
 original = load_dataset("{{REPO_ID}}", "original_mixed")
 expansion = load_dataset("{{REPO_ID}}", "expansion_mixed")
+{{ADDITIONAL_CONFIG_EXAMPLES}}
 everything = load_dataset("{{REPO_ID}}", "all")
 ```
 
 For a fixed snapshot, add `revision="v{{VERSION}}"` to `load_dataset`. The original release remains available at `revision="v1.0.0"`; its schema included the now-removed redundant source-hash column.
 
-**The configurations overlap; do not concatenate `all` with the others.** Each control shares the original source with one mixed document and is intentionally in the same split. Source IDs, group IDs and normalized duplicate texts are isolated across train/validation/test, including across the two cohorts. JMLR split groups are paper-level; historical fiction uses the recorded book/author grouping. The source pair is a useful unit for analysis; treating paired controls and mixed documents as independent observations can inflate confidence intervals.
+**The configurations overlap; do not concatenate `all` with the others.** Each control shares the original source with one mixed document and is intentionally in the same split. Source IDs, group IDs and normalized duplicate texts are isolated across train/validation/test across all cohorts. JMLR split groups are paper-level; historical fiction uses the recorded book/author grouping. The source pair is a useful unit for analysis; treating paired controls and mixed documents as independent observations can inflate confidence intervals.
 
 ## Source provenance
 
@@ -74,7 +76,7 @@ For a fixed snapshot, add `revision="v{{VERSION}}"` to `load_dataset`. The origi
 | Federal Reserve Beige Book | {{COUNT_beigebook}} | Dated official narratives and saved source hashes; capture-version dates are not independently certified. |
 | JMLR, 2000–2014 | {{COUNT_jmlr_pre2015}} | Publication year agrees between the journal index and PDF; original PDF/layout/index hashes, authors and paragraph locations are retained. |
 
-The ML sample was selected with a seeded shuffle from JMLR volumes 1–15. Papers had to yield a continuous sequence of at least six usable prose paragraphs, with no splice across omitted material. Extraction used Poppler rather than a language model, with recorded line joining, dehyphenation and normalization. Selection therefore favors PDFs with usable narrative extraction; it is not a representative sample of all ML papers. Human-only source material was drawn from the upstream documented collections, not accepted on the strength of a detector score.
+The ML sample was selected with a seeded shuffle from JMLR volumes 1–15. {{ML_EXTRACTION_PARAGRAPHS}} Selection does not join separate eligible runs across rejected paragraphs. Extraction used Poppler rather than a language model, with recorded line joining, dehyphenation and normalization. Heuristic paragraphs can include a figure caption joined to nearby narrative, and inline mathematical notation loses some visual layout; source coordinates and the visual-review findings retain these artifacts. Selection therefore favors PDFs with usable narrative extraction; it is not a representative sample of all ML papers. Human-only source material was drawn from the upstream documented collections, not accepted on the strength of a detector score.
 
 The historical-fiction/reference/finance source collection was pinned to upstream repository revision `b618ca42b85fcb4cd8ddcc60cf18ed957262cd6a`. The generation plans and selection details are recorded in [provenance](provenance); original source excerpts and metadata are in [sources/originals.jsonl](sources/originals.jsonl).
 
@@ -93,7 +95,7 @@ Successful generations were cached. Failed quality attempts were retried; the ex
 - All {{RECORD_TOTAL}} release records pass the full JSON Schema and exact reconstruction/span checks. Text and prompt content are unchanged by packaging.
 - All {{SPAN_TOTAL}} AI replacement blocks passed the configured source-copy checks, including checks against the full own-parent text rather than only the excerpt. The check uses normalized exact 8-gram coverage with a 15% ceiling. This is **not an Internet-wide plagiarism check** and cannot prove that every generated sentence is novel.
 - Final audits report no missing planned documents or outstanding prose-review flags.
-- Five outputs per modern writer were reviewed in each cohort, including the expansion probe. Five actual paper PDF-page renders were compared with extraction. The full dataset was not manually reviewed sentence by sentence.
+- Five outputs per participating modern writer were reviewed in each cohort. {{PDF_REVIEW_DESCRIPTION}} The full dataset was not manually reviewed sentence by sentence.
 - Two cached Opus 3 passages that substantially copied other chapters of their source books were quarantined and replaced. The final export contains their accepted replacements; the quality history is retained in the original-cohort quarantine report.
 - Factual/causal fidelity, exact output length and exact paragraph count are **not** acceptance requirements. The objective is usable, correctly attributed text for a detector; rewritten paper passages are not reliable accounts of the original research.
 
@@ -112,7 +114,7 @@ data/<configuration>/{train,validation,test}.parquet
 records/{all,mixed,human-controls}.jsonl
 sources/originals.jsonl
 schema/{README.md,full-record.schema.json,arrow-schema.txt}
-audits/{original,ml_papers,expansion}/
+audits/<cohort>/
 provenance/                    # portable selection/configuration and copy-policy exports
 manifest/                      # release, splits, upstream hashes, metadata transformations
 review/index.html              # self-contained offline review of all {{RECORD_TOTAL}} records
@@ -128,7 +130,7 @@ Full original PDFs/books, raw browser responses/session state, local logs, crede
 
 ## Intended use and limitations
 
-Suitable for span-level AI/non-AI detection research, mixed-authorship segmentation, matched-pair experiments and exploratory model attribution. Labels describe the construction process and depend on the documented source-origin evidence. This pilot is synthetic, small, English-only and limited to four recorded writers; its performance is not a claim about real-world detector reliability or unseen models. Prompt style, source domains, extraction artifacts and replacement boundaries may become shortcuts. Do not use a classifier trained only on this collection to make consequential claims about an individual's authorship.
+Suitable for span-level AI/non-AI detection research, mixed-authorship segmentation, matched-pair experiments and exploratory model attribution. Labels describe the construction process and depend on the documented source-origin evidence. This pilot is synthetic, small, English-only and limited to {{WRITER_COUNT}} recorded writers; its performance is not a claim about real-world detector reliability or unseen models. Prompt style, source domains, extraction artifacts and replacement boundaries may become shortcuts. Do not use a classifier trained only on this collection to make consequential claims about an individual's authorship.
 
 ## Rights and citation
 

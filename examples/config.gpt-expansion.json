@@ -1,0 +1,65 @@
+{
+  "dataset": {
+    "seed": 2026100502,
+    "variants_per_source": 1,
+    "include_human_controls": true,
+    "unit": "paragraph",
+    "mode": "random",
+    "block_sizes": [
+      3,
+      4,
+      6
+    ],
+    "min_blocks": 1,
+    "max_blocks": 2,
+    "max_replaced_fraction": 0.55,
+    "summary_min_sentences": 2,
+    "summary_max_sentences": 3,
+    "context_chars": 600,
+    "copy_ngram": 8,
+    "max_copy_fraction": 0.15,
+    "train_fraction": 0.8,
+    "validation_fraction": 0.1,
+    "test_fraction": 0.1,
+    "quality_attempts": 3,
+    "allow_human_candidates": true,
+    "require_prose_paragraphs": true
+  },
+  "summarizer": {
+    "concurrency": 2,
+    "timeout_seconds": 300,
+    "retries": 2,
+    "name": "briefs",
+    "kind": "claude",
+    "model": "claude-haiku-4-5-20251001",
+    "family": "anthropic"
+  },
+  "generators": [
+    {
+      "name": "gpt_sol",
+      "kind": "codex",
+      "model": "gpt-6.1-sol",
+      "family": "openai",
+      "timeout_seconds": 300,
+      "retries": 2,
+      "concurrency": 2,
+      "cli_args": [
+        "-c",
+        "model_reasoning_effort=\"low\""
+      ]
+    },
+    {
+      "name": "gpt_luna",
+      "kind": "codex",
+      "model": "gpt-6-luna",
+      "family": "openai",
+      "timeout_seconds": 300,
+      "retries": 2,
+      "concurrency": 2,
+      "cli_args": [
+        "-c",
+        "model_reasoning_effort=\"low\""
+      ]
+    }
+  ]
+}

@@ -26,8 +26,8 @@ def publish(folder, repo_id, expected_parent, receipt):
     assert before.sha==expected_parent,'Hub head changed; inspect the intervening update before publishing.'
     assert not before.private,'The authorized dataset is expected to remain public.'
     info=api.upload_folder(repo_id=repo_id,repo_type='dataset',folder_path=str(folder),parent_commit=expected_parent,
-        commit_message=f"Release v{release['release_version']}: {release['mixed_documents']} mixed documents, source hash column removed",
-        commit_description='Adds the audited three-model expansion and matched controls; preserves earlier document IDs, text and splits. All current Parquet configurations omit source_text_sha256.',
+        commit_message=f"Release v{release['release_version']}: {release['mixed_documents']} mixed documents with audited model expansions",
+        commit_description='Adds audited generation cohorts and matched controls; preserves earlier document IDs, text and splits. All current Parquet configurations omit source_text_sha256.',
         ignore_patterns=['**/__pycache__/**','**/*.pyc'])
     print('uploaded_commit',info.oid,flush=True)
     api.create_tag(repo_id,tag=f"v{release['release_version']}",revision=info.oid,repo_type='dataset',exist_ok=True)

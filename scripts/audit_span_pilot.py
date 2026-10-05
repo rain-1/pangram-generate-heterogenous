@@ -15,6 +15,18 @@ from heterogeneous.core import read_jsonl, text_hash, write_json
 from heterogeneous.pipeline import Runner, load_plan, validate_dataset
 
 
+def validate_writer_identity(backend, provenance):
+    assert provenance['requested_model']==backend['model']
+    status=provenance['metadata']['model_identity_status']
+    if backend['kind']=='claude-web':
+        assert provenance['reported_model']=='Opus 3' and status=='ui_label_only'
+        assert provenance['metadata']['exact_checkpoint_unreported'] is True
+    elif backend['kind']=='codex' and provenance['reported_model'] is None:
+        assert status=='requested_only'
+    else:
+        assert provenance['reported_model']==backend['model'] and status=='reported'
+
+
 def audit(run: Path, require_complete: bool = False):
     def no_generation(*args):
         raise AssertionError('Auditing must never request model completions')
@@ -32,7 +44,7 @@ def audit(run: Path, require_complete: bool = False):
     expected_counts = Counter(v['generator_names'][0] for v in plan['variants'])
     assert len({r['source']['id'] for r in mixed}) == len(mixed)
     assert {r['source']['id'] for r in controls} == set(variants)
-    counts = Counter()
+    counts = Counter(); identity_counts = Counter()
     ratios, compressions, flags = [], [], []
     # These are review flags, not an automatic claim that dialogue is a refusal.
     metatext = re.compile(r"^(?:I'm sorry[, ]+but|I (?:cannot|can't) (?:assist|help|provide|generate)|(?:Certainly|Sure)[,!]|Here(?:'s| is) (?:the|a) (?:rewritten|generated|expanded)|As an AI)", re.I)
@@ -55,14 +67,8 @@ def audit(run: Path, require_complete: bool = False):
             assert generation['text'] == b['generated_text']
             provenance = generation['provenance']
             assert text_hash(generation['prompt']) == provenance['prompt_sha256']
-            assert provenance['requested_model'] == backend['model']
-            if backend['kind'] == 'claude-web':
-                assert provenance['reported_model'] == 'Opus 3'
-                assert provenance['metadata']['model_identity_status'] == 'ui_label_only'
-                assert provenance['metadata']['exact_checkpoint_unreported'] is True
-            else:
-                assert provenance['reported_model'] == backend['model']
-                assert provenance['metadata']['model_identity_status'] == 'reported'
+            validate_writer_identity(backend,provenance)
+            identity_counts[provenance['metadata']['model_identity_status']]+=1
             ratios.append(len(b['generated_text']) / b['source_characters'])
             compressions.append(len(b['summary']) / b['source_characters'])
             if metatext.search(b['generated_text'].lstrip()):
@@ -78,6 +84,7 @@ def audit(run: Path, require_complete: bool = False):
         'evaluation_policy': 'detector_task_fitness', 'mixed_documents': len(mixed),
         'human_controls': len(controls), 'complete': complete, 'models': dict(counts),
         'expected_models': dict(expected_counts),
+        'writer_identity_spans':dict(identity_counts),
         'missing_variants': [v['id'] for v in plan['variants'] if v['source_id'] not in finished],
         'integrity_checks': 'pass', 'prose_review_flags': flags,
         'replacement_length_ratio': {'min':min(ratios), 'median':median(ratios), 'max':max(ratios)} if ratios else None,
@@ -85,6 +92,7 @@ def audit(run: Path, require_complete: bool = False):
         'limitations': [
             'Source spans are documented human-origin candidates, not certified human authorship.',
             'Browser Opus 3 identity is the selected UI label; its exact checkpoint is unreported.',
+            'Codex outputs may retain requested-only model attribution when the CLI does not report the served identity.',
             'Factual drift and length differences are not rejection criteria for this detector dataset.',
             'Pattern-based prose flags require inspection and are not semantic quality judgments.',
         ],

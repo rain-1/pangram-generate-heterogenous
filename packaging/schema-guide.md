@@ -73,7 +73,7 @@ construction
   kind, plan_id, seed, prompt_version, selection_unit, ...
 ```
 
-The rich AI author/provenance includes backend kind, requested/reported identity, revision/provider where reported, finish reason, generation time, exact prompt hash, request reference, sampling, usage and metadata. Unreported fields remain null/empty. The selected browser Opus 3 identity is `ui_label_only`, without a claimed exact API checkpoint. Private browser URL values are replaced with stable SHA-256 references; local paths become explicit upstream artifact hints.
+The rich AI author/provenance includes backend kind, requested/reported identity, revision/provider where reported, finish reason, generation time, exact prompt hash, request reference, sampling, usage and metadata. Unreported fields remain null/empty. Codex writers retain `reported_model=null` and `model_identity_status="requested_only"` when the CLI does not report the served identity; `requested_model` still identifies the explicitly requested writer. The selected browser Opus 3 identity is `ui_label_only`, without a claimed exact API checkpoint. Private browser URL values are replaced with stable SHA-256 references; local paths become explicit upstream artifact hints.
 
 `source.text` is the canonical excerpt used for reconstruction. `source_start/source_end` always index that string, not a whole PDF or entire book. Where available, `parent_character_range`, raw hashes and PDF paragraph/page locations identify the earlier extraction stage. Human spans reproduce the source slice exactly; replacing the recorded source blocks with `generated_text` reconstructs the resulting document exactly.
 

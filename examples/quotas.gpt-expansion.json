@@ -1,0 +1,14 @@
+{
+  "gpt_sol": {
+    "gutenberg_selected": 10,
+    "standardebooks": 40,
+    "wikitext2_raw": 3,
+    "beigebook": 47
+  },
+  "gpt_luna": {
+    "gutenberg_selected": 10,
+    "standardebooks": 40,
+    "wikitext2_raw": 3,
+    "beigebook": 47
+  }
+}

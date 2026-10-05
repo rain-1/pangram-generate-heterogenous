@@ -24,7 +24,9 @@ def build(runs, out):
         data = read_jsonl(run / 'dataset.jsonl')
         assert all(r['construction']['plan_id'] == audit['plan_id'] for r in data)
         records.extend(data)
-        name = ('expansion' if 'expansion' in run.name else
+        name = ('gpt_ml_papers' if 'gpt-ml-papers' in run.name else
+                'gpt_general' if 'gpt-general' in run.name else
+                'expansion' if 'expansion' in run.name else
                 'ml_papers' if 'ml-papers' in run.name else 'original')
         cohorts.append({'name':name,'directory':str(run.resolve()), 'plan_id':audit['plan_id'],
                         'mixed':audit['mixed_documents'], 'controls':audit['human_controls'],
@@ -47,24 +49,26 @@ def build(runs, out):
         write_jsonl(out/f'{split}.jsonl',(r for r in records if r['split']==split))
     report.update({'created_at':datetime.now(timezone.utc).isoformat(), 'complete':True,
                    'mixed_documents':total,'human_controls':total,'models':dict(counts),'cohorts':cohorts,
-                   'checks':['Source, group and normalized duplicate split isolation across both cohorts',
+                   'checks':['Source, group and normalized duplicate split isolation across all cohorts',
                              f'Exact reconstruction/span integrity for all {len(records)} records',
                              'Complete cohort provenance audits and full-parent copy checks'],
                    'limitations':['Human-origin labels retain documentary candidate status.',
                                   'Opus 3 is attributed to its selected UI label; exact checkpoint unreported.',
+                                  'Codex writer IDs are requested-only when the CLI does not report the served model.',
                                   'Generated papers are narrative excerpts, not full papers.',
                                   'Factual drift and output length are not rejection criteria.'],
                    'files':{name:hashlib.sha256((out/name).read_bytes()).hexdigest() for name in
                             ['dataset.jsonl','mixed.jsonl','human-controls.jsonl','train.jsonl','validation.jsonl','test.jsonl']}})
     write_json(out/'manifest.json', report)
     rows=[]
-    for name in ['haiku','sonnet','opus','opus3']:
+    for name in counts:
         values=[cohort['models'].get(name,0) for cohort in cohorts]
         rows.append(f'<tr><th>{escape(name)}</th>'+''.join(f'<td>{v}</td>' for v in values)+f'<td>{counts[name]}</td></tr>')
     links=[]
     for run,cohort in zip(runs,cohorts):
         relative=Path(os.path.relpath(run,out)).as_posix()
-        label={'original':'Original four-model batch','ml_papers':'Pre-2015 ML papers','expansion':'New three-model expansion'}[cohort['name']]
+        label={'original':'Original four-model batch','ml_papers':'Pre-2015 ML papers','expansion':'Three-model expansion',
+               'gpt_general':'GPT general documents','gpt_ml_papers':'GPT pre-2015 ML papers'}[cohort['name']]
         links.append(f'<section><h2>{label}</h2><p>{cohort["mixed"]} mixed documents + {cohort["controls"]} unchanged controls.</p>'
                      f'<a href="{relative}/review.html">Open all colored documents</a> · '
                      f'<a href="{relative}/detector-quality-audit.json">Integrity audit</a> · '

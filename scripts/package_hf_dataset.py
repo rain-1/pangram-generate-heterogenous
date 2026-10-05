@@ -21,7 +21,7 @@ from heterogeneous.core import read_jsonl, write_json, write_jsonl
 from heterogeneous.pipeline import validate_dataset
 
 ROOT = Path(__file__).resolve().parents[1]
-COMBINED = ROOT / 'runs/heterogeneous-20261005-expanded'
+COMBINED = ROOT / 'runs/heterogeneous-20261005-with-gpt'
 CONFIGS = ['mixed', 'human_controls', 'all', 'original_mixed', 'ml_papers_mixed']
 SPLITS = ['train', 'validation', 'test']
 
@@ -122,11 +122,13 @@ def matches(record, config):
     return (config == 'all' or config == 'mixed' and mixed
             or config == 'human_controls' and not mixed
             or config == 'original_mixed' and mixed and record['cohort'] == 'original'
-            or config == 'ml_papers_mixed' and mixed and record['cohort'] == 'ml_papers'
-            or config == 'expansion_mixed' and mixed and record['cohort'] == 'expansion')
+            or config == 'ml_papers_mixed' and mixed and record['source_dataset'] == 'jmlr_pre2015'
+            or config == 'expansion_mixed' and mixed and record['cohort'] == 'expansion'
+            or config == 'gpt_general_mixed' and mixed and record['cohort'] == 'gpt_general'
+            or config == 'gpt_ml_papers_mixed' and mixed and record['cohort'] == 'gpt_ml_papers')
 
 
-def build(out, repo_id, combined=COMBINED, version='1.1.0', previous_release=None):
+def build(out, repo_id, combined=COMBINED, version='1.2.0', previous_release=None):
     if out.exists():
         raise ValueError(f'Release directory already exists: {out}; choose a new directory.')
     out.mkdir(parents=True)
@@ -141,6 +143,7 @@ def build(out, repo_id, combined=COMBINED, version='1.1.0', previous_release=Non
         assert name not in runs
         runs[name]=Path(cohort['directory']);cohort_names[cohort['plan_id']]=name
     configs=CONFIGS+(['expansion_mixed'] if 'expansion' in runs else [])
+    configs += [f'{name}_mixed' for name in ['gpt_general','gpt_ml_papers'] if name in runs]
     counts = Counter()
     records = [portable_record(r, counts) for r in raw]
     preserved_previous=0
@@ -161,6 +164,9 @@ def build(out, repo_id, combined=COMBINED, version='1.1.0', previous_release=Non
     if version=='1.1.0':
         assert 'expansion' in runs and total==1000
         assert Counter(r['replacements'][0]['generation']['provenance']['backend'] for r in mixed)=={'haiku':300,'sonnet':300,'opus':300,'opus3':100}
+    if version=='1.2.0':
+        assert {'gpt_general','gpt_ml_papers'} <= set(runs) and total==1400
+        assert Counter(r['replacements'][0]['generation']['provenance']['backend'] for r in mixed)=={'haiku':300,'sonnet':300,'opus':300,'opus3':100,'gpt_sol':200,'gpt_luna':200}
     write_jsonl(out / 'records/all.jsonl', records)
     write_jsonl(out / 'records/mixed.jsonl', mixed)
     write_jsonl(out / 'records/human-controls.jsonl', controls)
@@ -188,6 +194,7 @@ def build(out, repo_id, combined=COMBINED, version='1.1.0', previous_release=Non
         'source-check.json', 'source-visual-review.json', 'model-probe-audit.json',
         'browser-scheduling.json', 'parent-copy-quarantine.json',
         'all-scheduling.json', 'probe-scheduling.json',
+        'retry-results.json', 'brief-retry-audit.json',
     ]
     for cohort, run in runs.items():
         a = json.loads((run / 'detector-quality-audit.json').read_text())
@@ -211,7 +218,7 @@ def build(out, repo_id, combined=COMBINED, version='1.1.0', previous_release=Non
     write_json(out / 'manifest/portable-metadata-changes.json', dict(counts))
     for directory in ['heterogeneous', 'scripts', 'tests', 'examples']:
         for path in (ROOT / directory).rglob('*'):
-            if path.is_file() and path.suffix in ['.py', '.toml']:
+            if path.is_file() and (path.suffix in ['.py', '.toml'] or path.parent==ROOT/'examples' and path.name in ['config.gpt-expansion.json','quotas.gpt-expansion.json']):
                 dest = out / 'reproduction' / path.relative_to(ROOT)
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(path, dest)
@@ -228,17 +235,39 @@ def build(out, repo_id, combined=COMBINED, version='1.1.0', previous_release=Non
     }
     writer_counts=Counter(r['replacements'][0]['generation']['provenance']['backend'] for r in mixed)
     writer_table=[]
-    identities={'haiku':'claude-haiku-4-5-20251001','sonnet':'claude-sonnet-5-5','opus':'claude-opus-5-5','opus3':'Browser UI label `Opus 3`'}
-    for writer,label in [('haiku','Haiku'),('sonnet','Sonnet'),('opus','Current Opus'),('opus3','Opus 3')]:
-        values=[sum(r['replacements'][0]['generation']['provenance']['backend']==writer for r in mixed if cohort_names[r['construction']['plan_id']]==c) for c in ['original','ml_papers','expansion']]
+    identities={'haiku':'claude-haiku-4-5-20251001','sonnet':'claude-sonnet-5-5','opus':'claude-opus-5-5','opus3':'Browser UI label `Opus 3`',
+                'gpt_sol':'Requested `gpt-6.1-sol`; served identity unreported',
+                'gpt_luna':'Requested `gpt-6-luna`; served identity unreported'}
+    writer_order=[('haiku','Haiku'),('sonnet','Sonnet'),('opus','Current Opus'),('opus3','Opus 3'),('gpt_sol','GPT-6.1 Sol'),('gpt_luna','GPT-6 Luna')]
+    cohorts=list(runs)
+    for writer,label in writer_order:
+        if writer not in writer_counts:continue
+        values=[sum(r['replacements'][0]['generation']['provenance']['backend']==writer for r in mixed if cohort_names[r['construction']['plan_id']]==c) for c in cohorts]
         writer_table.append(f'| {label} | '+ ' | '.join(map(str,values))+f' | {writer_counts[writer]} | {identities[writer]} |')
     source_counts=Counter(r['source']['dataset'] for r in mixed)
+    has_gpt={'gpt_general','gpt_ml_papers'} <= set(runs)
+    gpt_section='''### Version 1.2.0 GPT expansion
+
+Adds 100 general documents and 100 distinct pre-2015 ML-paper excerpts for each of GPT-6.1 Sol and GPT-6 Luna: 400 mixed documents plus 400 controls. General passages per writer comprise 10 Gutenberg, 40 Standard Ebooks, 3 WikiText and 47 Beige Book excerpts, reflecting the remaining unused eligible source pool. The 200 additional papers exclude every previously used paper.
+
+GPT writers used Codex subscription authentication with requested IDs `gpt-6.1-sol` and `gpt-6-luna`, and explicit low reasoning effort. The CLI did not report the served model: `reported_model=null`, `model_identity_status="requested_only"`. No served checkpoint is inferred. Briefs still use Haiku, as in previous cohorts. New paper excerpts require at least five continuous clean prose paragraphs, with at most 65% of source characters replaced; the same 3/4/6-paragraph blocks, brief bottleneck and 15% source-copy ceiling apply.
+
+All {{PREVIOUS_RECORD_COUNT}} previous full records are preserved exactly, including IDs, source/generated text, prompts and split assignments. `ml_papers_mixed` now includes both the earlier and GPT paper cohorts; `gpt_ml_papers_mixed` isolates the added 200 papers.''' if has_gpt else ''
     substitutions={
         '{{REPO_ID}}':repo_id,'{{VERSION}}':version,'{{TOTAL}}':str(total),
         '{{RECORD_TOTAL}}':str(len(records)),'{{SPAN_TOTAL}}':str(span_total),
         '{{WRITER_TABLE}}':'\n'.join(writer_table),
-        '{{EXPANSION_OPTION}}':'<option value="expansion">New expansion</option>' if 'expansion' in runs else '',
-        '{{COHORT_CONFIGS}}':'`original`/`ml_papers`/`expansion`' if 'expansion' in runs else '`original`/`ml_papers`',
+        '{{WRITER_HEADER}}':'| Writer | '+' | '.join(cohorts)+' | Mixed total | Recorded identity |\n|---|'+''.join('---:|' for c in cohorts)+'---:|---|',
+        '{{EXTRA_COHORT_OPTIONS}}':''.join(f'<option value="{c}">{c.replace("_"," ")}</option>' for c in cohorts if c not in ['original','ml_papers']),
+        '{{EXTRA_WRITER_OPTIONS}}':''.join(f'<option value="{w}">{label}</option>' for w,label in writer_order if w in ['gpt_sol','gpt_luna'] and w in writer_counts),
+        '{{COHORT_CONFIGS}}':' / '.join(f'`{c}`' for c in cohorts),
+        '{{WRITER_COUNT}}':str(len(writer_counts)),
+        '{{PREVIOUS_RECORD_COUNT}}':str(preserved_previous),
+        '{{GENERATION_BACKENDS}}':'Claude models ran through Claude Code subscription authentication; GPT writers ran through Codex subscription authentication, retaining requested-only attribution when served identity was unreported; Opus 3 ran through the browser UI. No OpenRouter/open-weight generations are included.' if has_gpt else 'Modern Claude models ran through Claude Code subscription authentication; Opus 3 ran through the browser UI. No GPT/OpenRouter/open-weight generations are included.',
+        '{{GPT_EXPANSION_SECTION}}':gpt_section.replace('{{PREVIOUS_RECORD_COUNT}}',str(preserved_previous)),
+        '{{ADDITIONAL_CONFIG_EXAMPLES}}':f'gpt_general = load_dataset("{repo_id}", "gpt_general_mixed")\ngpt_papers = load_dataset("{repo_id}", "gpt_ml_papers_mixed")' if has_gpt else '',
+        '{{ML_EXTRACTION_PARAGRAPHS}}':'The original paper cohort requires at least six continuous usable prose paragraphs; the GPT paper cohort requires at least five.' if has_gpt else 'Papers had to yield a continuous sequence of at least six usable prose paragraphs.',
+        '{{PDF_REVIEW_DESCRIPTION}}':'Five actual PDF-page renders were checked for the original paper cohort, and five additional pages for the GPT paper cohort.' if has_gpt else 'Five actual paper PDF-page renders were compared with extraction.',
         '{{SPLIT_TABLE}}':'\n'.join(f'| `{c}` | {v["train"]} | {v["validation"]} | {v["test"]} | {sum(v.values())} |' for c,v in split_counts.items()),
         **{f'{{{{COUNT_{k}}}}}':str(v) for k,v in source_counts.items()},
     }
@@ -253,7 +282,7 @@ def build(out, repo_id, combined=COMBINED, version='1.1.0', previous_release=Non
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(substitute((ROOT / 'packaging' / source).read_text()), encoding='utf-8')
     review_records = [{
-        **{k: f[k] for k in ['id', 'split', 'kind', 'cohort', 'generator_backend', 'reported_model',
+        **{k: f[k] for k in ['id', 'split', 'kind', 'cohort', 'generator_backend', 'requested_model','reported_model','model_identity_status',
                             'source_title', 'source_author', 'source_dataset', 'source_reference', 'text', 'source_text', 'spans']},
         'briefs': [v['summary'] for v in r['replacements']],
     } for r, f in zip(records, flat)]
@@ -312,7 +341,7 @@ if __name__ == '__main__':
     parser.add_argument('--out', type=Path, required=True)
     parser.add_argument('--repo-id', default='open-text-detector/heterogeneous-ai-spans')
     parser.add_argument('--combined',type=Path,default=COMBINED)
-    parser.add_argument('--version',default='1.1.0')
+    parser.add_argument('--version',default='1.2.0')
     parser.add_argument('--previous-release',type=Path,help='Require exact preservation of every earlier portable full record.')
     args = parser.parse_args()
     build(args.out.resolve(), args.repo_id,args.combined.resolve(),args.version,args.previous_release)

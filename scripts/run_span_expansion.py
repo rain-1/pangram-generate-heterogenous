@@ -32,6 +32,9 @@ def process(run,scope,jobs,writer_jobs=None):
     plan=load_plan(run);source_audit=json.loads((run/'source-audit.json').read_text())
     assert source_audit['plan_id']==plan['id']
     assert hashlib.sha256((run/'input.jsonl').read_bytes()).hexdigest()==source_audit['input_sha256']
+    if all(source['dataset']=='jmlr_pre2015' for source in plan['sources']):
+        from scripts.run_ml_paper_pilot import source_check
+        source_check(run)
     policy=json.loads((run/'parent-copy-policy.json').read_text())
     assert policy['plan_id']==plan['id'] and not policy['uncovered_sources']
     for reference in {r['path']:r for r in policy['sources'].values()}.values():

@@ -496,3 +496,59 @@ the expected Hub parent commit, uploads an authorized release, creates its
 version tag, and verifies every remote file hash and configuration. Its
 `--receipt` belongs outside the release folder. Runtime model logs and
 credentials are not uploaded.
+
+## GPT general and paper expansion
+
+The next cohorts use explicitly requested `gpt-6.1-sol` and `gpt-6-luna`
+through Codex subscription authentication: 100 general documents and 100
+pre-2015 ML-paper excerpts per writer, with distinct sources and matched
+controls. The requested IDs and low reasoning effort are frozen in the
+configuration. Codex does not report the served identity in these outputs,
+so `reported_model` stays null and `model_identity_status` is `requested_only`.
+The summarizer remains Haiku for consistency with the earlier cohorts.
+
+```bash
+PYTHONPATH=. python scripts/prepare_span_expansion.py \
+  --run runs/gpt-general-20261005 \
+  --combined runs/heterogeneous-20261005-expanded --seed 2026100503 \
+  --config examples/config.gpt-expansion.json \
+  --quotas examples/quotas.gpt-expansion.json
+PYTHONPATH=. uv run --no-project --with beautifulsoup4 --with requests \
+  python scripts/prepare_ml_papers.py --run runs/gpt-ml-papers-20261005 \
+  --config examples/config.gpt-ml.toml --count 200 --minimum-paragraphs 5 \
+  --seed 2026100504 --exclude runs/heterogeneous-20261005-expanded/dataset.jsonl \
+  --source-cache runs/ml-papers-20261005/sources/jmlr/raw
+```
+
+General-document quotas reflect the remaining unused eligible pool and are
+identical for both writers. The paper expansion excludes all previously used
+papers, requires five continuous eligible paragraphs, and allows replacement
+of up to 65% of the original characters. The same 3/4/6-paragraph blocks,
+2–3-sentence briefs and 15% normalized 8-gram copy ceiling apply. Extraction
+retains recorded PDF paragraph locations; inline math is flattened and a
+figure caption can be joined to nearby narrative by the heuristic recovery.
+
+For each cohort, prepare full-parent references, choose five probe variants
+per writer in `verification-selection.json`, and run `run_span_expansion.py`
+with `--scope probe`. Papers also require a matching visual source review.
+Read the probe and save its decision in `model-probe-audit.json` before
+`--scope all`. Final assembly and audits use the same commands as the earlier
+expansion. The runner checks source hashes, model-probe approval and complete
+parent-reference coverage before bulk generation.
+
+Version 1.2.0 combines all five cohorts, preserving every previous full record.
+It adds `gpt_general_mixed` and `gpt_ml_papers_mixed`; `ml_papers_mixed` includes
+both the earlier and GPT paper cohorts. All Parquet configurations continue
+to omit `source_text_sha256`.
+
+```bash
+PYTHONPATH=. python scripts/build_dataset_handoff.py \
+  --runs runs/heterogeneous-pilot-20261005-v2 runs/ml-papers-20261005 \
+         runs/heterogeneous-expansion-20261005 \
+         runs/gpt-general-20261005 runs/gpt-ml-papers-20261005 \
+  --out runs/heterogeneous-20261005-with-gpt
+PYTHONPATH=. uv run --no-project --with pyarrow --with jsonschema --with pyyaml \
+  python scripts/package_hf_dataset.py --combined runs/heterogeneous-20261005-with-gpt \
+  --out releases/heterogeneous-ai-spans-v1.2.0 --version 1.2.0 \
+  --previous-release releases/heterogeneous-ai-spans-v1.1.0
+```

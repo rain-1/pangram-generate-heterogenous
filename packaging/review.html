@@ -33,8 +33,8 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 <div class="legend"><span class="tag human">Green · retained human text</span><span class="tag ai">Orange · generated AI text</span></div>
 <div class="filters">
 <label>Documents<select id="kind"><option value="mixed">Mixed documents</option><option value="human_control">Human controls</option><option value="">All records</option></select></label>
-<label>Cohort<select id="cohort"><option value="">All cohorts</option><option value="original">Original batch</option><option value="ml_papers">ML papers · 2000–2014</option>{{EXPANSION_OPTION}}</select></label>
-<label>Writer<select id="writer"><option value="">All writers</option><option value="haiku">Haiku</option><option value="sonnet">Sonnet</option><option value="opus">Current Opus</option><option value="opus3">Opus 3</option></select></label>
+<label>Cohort<select id="cohort"><option value="">All cohorts</option><option value="original">Original batch</option><option value="ml_papers">ML papers · 2000–2014</option>{{EXTRA_COHORT_OPTIONS}}</select></label>
+<label>Writer<select id="writer"><option value="">All writers</option><option value="haiku">Haiku</option><option value="sonnet">Sonnet</option><option value="opus">Current Opus</option><option value="opus3">Opus 3</option>{{EXTRA_WRITER_OPTIONS}}</select></label>
 <label>Split<select id="split"><option value="">All splits</option><option value="train">Train</option><option value="validation">Validation</option><option value="test">Test</option></select></label>
 <label>Search title or ID<input id="search" type="search" placeholder="Alice, collaborative filtering…"></label>
 </div>
@@ -44,7 +44,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 <details><summary>Content briefs used for the AI replacements</summary><div id="briefs"></div></details>
 <details><summary>Original retained source passage</summary><div class="original" id="original"></div></details></article>
 <div class="empty" id="empty" hidden>No documents match these filters.</div>
-<footer>Green text retains its documented human-origin candidate status; it is not independently certified wording. Opus 3 is attributed to the selected browser UI label, with its exact checkpoint unreported. Factual drift and replacement length are nonblocking. Offsets count Unicode code points.<br><a href="../README.md">Dataset card</a> · <a href="../schema/README.md">Schema guide</a> · <a href="../manifest/release.json">Release manifest</a></footer>
+<footer>Green text retains its documented human-origin candidate status; it is not independently certified wording. Opus 3 is attributed to the selected browser UI label, with its exact checkpoint unreported. Codex model labels retain requested-only status when served identity is unreported. Factual drift and replacement length are nonblocking. Offsets count Unicode code points.<br><a href="../README.md">Dataset card</a> · <a href="../schema/README.md">Schema guide</a> · <a href="../manifest/release.json">Release manifest</a></footer>
 </main>
 <script type="application/json" id="records">{{RECORDS}}</script>
 <script>
@@ -59,13 +59,14 @@ function render(){
  el('position').textContent=row?`${index+1} of ${filtered.length} matching records`:`0 matching records`;
  if(!row)return;
  el('title').textContent=row.source_title||row.source_dataset;
- el('identity').textContent=row.kind==='mixed'?`${row.reported_model} · ${{original:'Original batch',ml_papers:'ML papers',expansion:'New expansion'}[row.cohort]}`:'Unchanged human control';
+ const model=row.reported_model||`${row.requested_model} (requested; served identity unreported)`;
+ el('identity').textContent=row.kind==='mixed'?`${model} · ${{original:'Original batch',ml_papers:'ML papers',expansion:'Claude expansion',gpt_general:'GPT general documents',gpt_ml_papers:'GPT ML papers'}[row.cohort]||row.cohort}`:'Unchanged human control';
  el('metadata').textContent=`${row.source_author||'Source author not individually identified'} · ${row.split} · ${row.id}`;
  const link=el('sourceLink');link.hidden=!/^https?:\/\//.test(row.source_reference);link.href=link.hidden?'#':row.source_reference;
  const points=Array.from(row.text);const pieces=document.createDocumentFragment();
  for(const s of row.spans){const node=document.createElement('span');node.className=`fragment ${s.label}`;
   node.dataset.start=String(s.start);node.dataset.end=String(s.end);
-  node.title=`${s.label==='ai'?'AI · '+s.reported_model:'Human · '+(s.author_id||'source candidate')} · [${s.start}:${s.end}]`;
+  node.title=`${s.label==='ai'?'AI · '+(s.reported_model||s.requested_model+' (requested)'):'Human · '+(s.author_id||'source candidate')} · [${s.start}:${s.end}]`;
   node.textContent=points.slice(s.start,s.end).join('');pieces.appendChild(node);}
  el('text').replaceChildren(pieces);el('original').textContent=row.source_text;
  const briefs=document.createDocumentFragment();for(const brief of row.briefs){const p=document.createElement('p');p.className='brief';p.textContent=brief;briefs.appendChild(p);}

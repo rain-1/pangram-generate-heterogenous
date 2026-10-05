@@ -1,4 +1,4 @@
-"""Freeze 300 unused passages, retaining prior group splits and source evidence."""
+"""Freeze unused passages, retaining prior group splits and source evidence."""
 from __future__ import annotations
 import argparse
 from collections import Counter
@@ -35,7 +35,7 @@ def parent_range(source):
     return None
 
 
-def prepare(run, base, combined, core, seed):
+def prepare(run, base, combined, core, seed, quotas=None, generation_config=None):
     if run.exists():
         raise ValueError('Use a fresh run directory; never overwrite a frozen expansion.')
     old_records = read_jsonl(combined/'dataset.jsonl')
@@ -50,14 +50,21 @@ def prepare(run, base, combined, core, seed):
         if position:
             parent, a, b = position
             ranges.setdefault(parent, []).append((a,b))
-    config = deepcopy(json.loads((base/'plan.json').read_text())['config'])
-    config['generators'] = [b for b in config['generators'] if b['name'] != 'opus3']
+    quotas = deepcopy(QUOTAS if quotas is None else quotas)
+    expected_models = Counter({name:sum(values.values()) for name,values in quotas.items()})
+    total = sum(expected_models.values())
+    assert total > 0 and all(count > 0 for count in expected_models.values())
+    assert all(isinstance(count,int) and count >= 0 for values in quotas.values() for count in values.values())
+    config = deepcopy(generation_config or json.loads((base/'plan.json').read_text())['config'])
+    config['generators'] = [b for b in config['generators'] if b['name'] in quotas]
+    assert {b['name'] for b in config['generators']} == set(quotas)
     config['dataset']['seed'] = seed
     settings = config['dataset']
     assert file_hash(core/'manifest.json') == CORE_MANIFEST
     for name, expected in json.loads((core/'manifest.json').read_text())['outputs'].items():
         assert file_hash(core/name) == expected
     pools = {name: [] for name in ['gutenberg_selected','standardebooks','wikitext2_raw','beigebook']}
+    assert all(set(values) <= set(pools) for values in quotas.values())
     all_core_authors = set(); excluded = Counter()
     def add(source):
         if source['id'] in old_sources:
@@ -124,7 +131,7 @@ def prepare(run, base, combined, core, seed):
     rng=random.Random(seed); selected=[]; selected_hashes=set(); groups=Counter()
     for name,pool in pools.items():
         ordered=sorted(pool,key=lambda r:r['id']);rng.shuffle(ordered)
-        assignments=[model for model in QUOTAS for _ in range(QUOTAS[model].get(name,0))]
+        assignments=[model for model in quotas for _ in range(quotas[model].get(name,0))]
         rng.shuffle(assignments)
         cap={'gutenberg_selected':20,'standardebooks':25,'wikitext2_raw':1,'beigebook':4}[name]
         chosen=[]
@@ -136,31 +143,34 @@ def prepare(run, base, combined, core, seed):
         assert len(chosen)==len(assignments),(name,len(chosen),len(assignments),eligible)
         selected.extend(chosen)
     rng.shuffle(selected)
-    assert len(selected)==300 and Counter(r['generator_names'][0] for r in selected)=={'haiku':100,'sonnet':100,'opus':100}
+    assert len(selected)==total and Counter(r['generator_names'][0] for r in selected)==expected_models
     assert all(r['genre']=='fiction' for r in selected if r['generator_names']==['opus'])
     run.mkdir(parents=True)
     (run/'sources').symlink_to((base/'sources').resolve(),target_is_directory=True)
     write_jsonl(run/'input.jsonl',selected)
     write_json(run/'config.json',config)
-    plan=make_plan(run/'input.jsonl',config);assert len(plan['variants'])==300 and not plan['skipped']
+    plan=make_plan(run/'input.jsonl',config);assert len(plan['variants'])==total and not plan['skipped']
     save_plan(plan,run)
     for source in plan['sources']:
         if source['group_id'] in old_groups:assert plan['splits'][source['id']]==old_groups[source['group_id']]
     ids=[]
-    for model in QUOTAS:
+    probe_counts = {}
+    for model in quotas:
         candidates=[v for v in plan['variants'] if v['generator_names']==[model]]
         rng.shuffle(candidates)
-        if model=='opus':picked=candidates[:5]
-        else:
-            picked=[]
-            lookup={s['id']:s for s in plan['sources']}
-            for dataset in ['gutenberg_selected','standardebooks','wikitext2_raw','beigebook']:
+        picked=[]
+        lookup={s['id']:s for s in plan['sources']}
+        for dataset in pools:
+            if quotas[model].get(dataset,0):
                 picked.append(next(v for v in candidates if lookup[v['source_id']]['dataset']==dataset))
-            picked.append(next(v for v in candidates if v not in picked))
+        for v in candidates:
+            if len(picked)>=min(5,len(candidates)):break
+            if v not in picked:picked.append(v)
+        probe_counts[model]=len(picked)
         ids.extend(v['id'] for v in picked)
-    write_json(run/'verification-selection.json',{'plan_id':plan['id'],'variants':ids,'models':{'haiku':5,'sonnet':5,'opus':5}})
-    write_json(run/'source-audit.json',{'plan_id':plan['id'],'seed':seed,'sources':300,'eligible_unused':eligible,
-        'quotas':QUOTAS,'source_assignments':{'haiku':100,'sonnet':100,'opus':100},'input_sha256':file_hash(run/'input.jsonl'),
+    write_json(run/'verification-selection.json',{'plan_id':plan['id'],'variants':ids,'models':probe_counts})
+    write_json(run/'source-audit.json',{'plan_id':plan['id'],'seed':seed,'sources':total,'eligible_unused':eligible,
+        'quotas':quotas,'source_assignments':dict(expected_models),'input_sha256':file_hash(run/'input.jsonl'),
         'previous_dataset_sha256':file_hash(combined/'dataset.jsonl'),'core_manifest_sha256':CORE_MANIFEST,
         'source_repo_revision':REPO_REVISION,'exclusions':dict(excluded),
         'sampling':'Seeded shuffle within unused eligible source strata; explicit quotas and per-group caps.',
@@ -170,9 +180,9 @@ def prepare(run, base, combined, core, seed):
         'generation_policy':'Facts, length and paragraph counts remain nonblocking; exact spans, provenance, useful prose and copy checks required.'})
     write_json(run/'quality-gate.json',{'plan_id':plan['id'],'decision':'proceed','scope':'probe',
         'evaluation_policy':'detector_task_fitness','paragraph_count_policy':'soft_target',
-        'full_generation_requires':'matching successful 15-document model-probe-audit.json',
+        'full_generation_requires':f'matching successful {len(ids)}-document model-probe-audit.json',
         'reason':'Apply the established detector-task policy to the probe; bulk generation still requires review.'})
-    print(json.dumps({'plan_id':plan['id'],'sources':300,'blocks':sum(len(v['blocks']) for v in plan['variants']),
+    print(json.dumps({'plan_id':plan['id'],'sources':total,'blocks':sum(len(v['blocks']) for v in plan['variants']),
                       'model_counts':dict(Counter(s['generator_names'][0] for s in selected)),
                       'splits':dict(Counter(plan['splits'].values()))},indent=2),flush=True)
 
@@ -182,5 +192,9 @@ if __name__=='__main__':
     p.add_argument('--base',type=Path,default=Path('runs/heterogeneous-pilot-20261005-v2'))
     p.add_argument('--combined',type=Path,default=Path('runs/heterogeneous-20261005-combined'))
     p.add_argument('--core',type=Path,default=Path('../pretraining-datawork/data/corpus-human-diverse-core-v1'))
+    p.add_argument('--quotas',type=Path,help='JSON mapping backend names to collection counts.')
+    p.add_argument('--config',type=Path,help='Normalized JSON generation config; omitted uses the base plan.')
     p.add_argument('--seed',type=int,default=2026100502);a=p.parse_args()
-    prepare(a.run,a.base,a.combined,a.core,a.seed)
+    prepare(a.run,a.base,a.combined,a.core,a.seed,
+            json.loads(a.quotas.read_text()) if a.quotas else None,
+            json.loads(a.config.read_text()) if a.config else None)

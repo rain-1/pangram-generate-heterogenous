@@ -15,6 +15,7 @@ from pathlib import Path
 import random
 import re
 import subprocess
+import shutil
 import unicodedata
 from urllib.parse import urljoin
 import xml.etree.ElementTree as ET
@@ -203,13 +204,32 @@ def main():
     parser.add_argument('--count', type=int, default=300)
     parser.add_argument('--seed', type=int, default=20261005)
     parser.add_argument('--minimum-paragraphs', type=int, default=6)
+    parser.add_argument('--exclude', type=Path, help='Existing full-record JSONL; exclude its papers and exact source texts.')
+    parser.add_argument('--source-cache', type=Path, help='Reuse cached PDF/XML/index files without changing the cache.')
     args = parser.parse_args()
     run = args.run; raw = run / 'sources/jmlr/raw'; raw.mkdir(parents=True, exist_ok=True)
     if (run / 'plan.json').exists():
         raise ValueError('Refusing to replace a frozen plan')
     config = load_config(args.config)
+    config['dataset']['seed'] = args.seed
+    names = [backend['name'] for backend in config['generators']]
+    if args.count < 1 or args.count % len(names):
+        raise ValueError('Count must be positive and divisible by the number of writers')
+    old_groups = set(); old_hashes = set()
+    if args.exclude:
+        from heterogeneous.core import read_jsonl
+        for record in read_jsonl(args.exclude):
+            old_groups.add(record['source']['group_id'])
+            old_hashes.add(normalized_hash(record['source']['text']))
+    if args.source_cache:
+        for source in args.source_cache.iterdir():
+            target = raw/source.name
+            if not source.is_file() or target.exists():continue
+            if source.suffix=='.json':shutil.copy2(source,target)
+            elif source.suffix in ['.pdf','.xml','.html']:target.symlink_to(source.resolve())
     rng = random.Random(args.seed)
-    papers = sorted(inventory(raw), key=lambda p: p['id'])
+    complete_inventory = inventory(raw)
+    papers = sorted((paper for paper in complete_inventory if paper['id'] not in old_groups), key=lambda p: p['id'])
     rng.shuffle(papers)
     write_jsonl(run / 'paper-inventory.jsonl', papers)
     selected = []; rejected = []; seen = set()
@@ -241,11 +261,11 @@ def main():
                 indices.append(index); char_count += length + 2
             text = '\n\n'.join(doc['paragraphs'][index]['text'] for index in indices)
             sid = f"{paper['id']}:paragraphs:{indices[0]}-{indices[-1]+1}"
-            if normalized_hash(text) in seen or not select_blocks(text, config['dataset'], text_hash(sid)):
+            if normalized_hash(text) in seen or normalized_hash(text) in old_hashes or not select_blocks(text, config['dataset'], text_hash(sid)):
                 rejected.append({'paper_id': paper['id'], 'reason': 'Duplicate or no eligible replacement block'})
                 continue
             seen.add(normalized_hash(text))
-            name = ['haiku', 'sonnet', 'opus'][len(selected) % 3]
+            name = names[len(selected) % len(names)]
             selected.append({'id': sid, 'group_id': paper['id'], 'reference': paper['reference'],
                 'text': text, 'author_id': paper['authors'], 'genre': 'machine_learning_research', 'language': 'en',
                 'dataset': 'jmlr_pre2015', 'title': paper['title'], 'generator_names': [name],
@@ -272,17 +292,22 @@ def main():
     rng.shuffle(selected); write_jsonl(run / 'input.jsonl', selected)
     plan = make_plan(run / 'input.jsonl', config)
     assert not plan['skipped']
+    assert not {r['group_id'] for r in selected} & old_groups
+    assert Counter(r['generator_names'][0] for r in selected)=={name:args.count//len(names) for name in names}
     save_plan(plan, run)
     write_json(run / 'source-audit.json', {'plan_id': plan['id'], 'sources': len(selected),
         'unique_papers': len({r['group_id'] for r in selected}),
         'models': dict(Counter(r['generator_names'][0] for r in selected)),
         'years': dict(Counter(r['human_origin_basis']['publication_year'] for r in selected)),
         'seed': args.seed, 'input_sha256': sha(run / 'input.jsonl'),
+        'excluded_previous_papers':sum(p['id'] in old_groups for p in complete_inventory),
+        'previous_dataset_sha256':sha(args.exclude) if args.exclude else None,
         'collection_script_sha256': sha(Path(__file__)), 'retrieved_at': datetime.now(timezone.utc).isoformat(),
         'sampling': 'Seeded shuffled eligible JMLR papers from volumes 1–15; one continuous prose excerpt per distinct paper; model assignment round-robin before final shuffle.',
         'checks': ['Publication year <2015 in both journal index and PDF', 'PDF/XML hashes retained',
             'No model used for text recovery', f'Continuous run of ≥{args.minimum_paragraphs} eligible prose paragraphs',
-            'No normalized exact duplicate excerpts', 'One paper per source; group split in frozen plan'],
+            'No normalized exact duplicate excerpts', 'One paper per source; group split in frozen plan',
+            'Previously used papers and exact source texts excluded when a previous dataset is supplied'],
         'limitations': ['Historical dates support human origin but do not certify every word',
             'PDF paragraph/dehyphenation recovery requires visual sample review',
             'Prose excerpts exclude most mathematics; not a full-paper corpus',

@@ -46,3 +46,20 @@ def test_expansion_subset_does_not_silently_enter_original_or_paper_cohorts():
     assert matches(mixed,'mixed') and matches(mixed,'all') and matches(mixed,'expansion_mixed')
     assert not matches(mixed,'original_mixed') and not matches(mixed,'ml_papers_mixed')
     assert matches(control,'human_controls') and not matches(control,'expansion_mixed')
+
+
+@pytest.mark.parametrize('cohort',['gpt_general','gpt_ml_papers'])
+def test_gpt_subsets_keep_requested_identity_and_include_papers_in_paper_view(tmp_path,cohort):
+    record=fixture(True)
+    author=record['spans'][0]['author']
+    author.update(backend='gpt_sol',requested_model='gpt-6.1-sol',reported_model=None,
+                  metadata={'model_identity_status':'requested_only'})
+    record['source']['dataset']='jmlr_pre2015' if cohort=='gpt_ml_papers' else 'standardebooks'
+    row=flat_record(record,{'fixture-plan':cohort})
+    path=tmp_path/'gpt.parquet';pq.write_table(pa.Table.from_pylist([row],schema=VIEW_SCHEMA),path)
+    loaded=pq.read_table(path).to_pylist()[0]
+    assert loaded['requested_model']=='gpt-6.1-sol' and loaded['reported_model'] is None
+    assert loaded['model_identity_status']==loaded['spans'][0]['model_identity_status']=='requested_only'
+    assert matches(loaded,f'{cohort}_mixed')
+    assert matches(loaded,'ml_papers_mixed')==(cohort=='gpt_ml_papers')
+    assert not matches(loaded,'original_mixed') and not matches(loaded,'expansion_mixed')
