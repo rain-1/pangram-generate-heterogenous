@@ -275,6 +275,62 @@ Hashes, partition coverage, exact retention of human slices, AI authors, replace
 coverage, and split isolation are checked by `validate`. JSON Schema describes
 types; relationships involving actual text require the runtime validator.
 
+## Resumable overnight expansion
+
+`scripts/prepare_overnight.py` freezes four balanced 1000-document batches using
+unused historical-book passages, cached pre-2015 JMLR excerpts, and eligible
+provenance-screened documentary passages. It excludes previously selected paper
+ranges and overlapping new excerpts, keeps paper/author groups in one split,
+and pins full parent texts for copying checks. This campaign's general sources
+are predominantly historical fiction. Sources retain candidate status rather than
+an assertion of independently verified human authorship.
+
+Each batch assigns 200 different sources to each of Haiku, Sonnet, current Opus,
+GPT-6.1 Sol and GPT-6 Luna. The four non-Opus writers each get 100 ML and 100 general
+passages; Opus gets 200 fiction passages. The 4000 mixed documents have 4000
+matched unchanged controls. No new Opus 3 completions are requested.
+
+| Profile | Paragraphs per block | Maximum blocks | Source replacement cap | Brief sentences | Context characters |
+| --- | --- | --- | --- | --- | --- |
+| One block | 2, 3, 4 | 1 | 55% | 2–3 | 400 |
+| Moderate | 2, 3, 5 | 2 | 60% | 2–3 | 600 |
+| More context | 2, 4, 6 | 2 | 65% | 2–3 | 900 |
+| Richer briefs | 2, 3, 4, 5 | 2 | 60% | 2–4 | 600 |
+
+The maximum values are selection limits, not guaranteed block counts. Context
+uses complete retained paragraphs, so its character budget is soft. Three-paragraph
+ML excerpts constrain the available block sizes. Inspect actual construction
+metadata when stratifying evaluation.
+
+Before unattended generation, run and read the 15-document probe in each batch,
+then save matching `model-probe-audit.json` and `source-visual-review.json` reviews
+with the frozen `plan_id` and `decision="proceed"`. The supervisor checks these
+reviews before making subscription-backed calls:
+
+```bash
+PYTHONPATH=. uv run --no-project --with jsonschema python scripts/run_overnight.py \
+  --campaign runs/overnight-20261005-4000
+```
+
+The supervisor generates batches sequentially with a 30-minute pause between
+completed batches. Repeated CLI/provider failures stop new submissions, drain
+in-flight calls, and trigger a 30-minute retry cooldown. Up to eight attempts per
+batch are checkpointed; `--max-attempts` can be increased when resuming. Cached
+successful completions are reused. There is no paid API fallback.
+
+`status.html` and `status.json` show progress and persistent resume deadlines.
+Each batch retains its colored review, detailed logs and span/provenance/copy
+audits. On completion, `new-data/` contains this campaign and `with-previous/`
+contains the cumulative dataset, with original records and split assignments
+preserved. Prose flags are retained in `review-needed.json`; generation completion
+does not silently approve flagged prose for publication. No HF upload happens
+in this supervisor.
+
+Run under a user service to survive closing the terminal. This local process
+requires the computer to remain powered and awake. After a reboot, rerunning
+the same command resumes caches and waits only the remainder of any recorded
+cooldown.
+
 ## Sampling, quality and evaluation
 
 Default sampling chooses 1–3 non-overlapping blocks of variable size while retaining

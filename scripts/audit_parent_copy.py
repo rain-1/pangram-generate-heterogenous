@@ -59,6 +59,11 @@ def prepare_policy(run, plan):
             text = re.sub(r'([(\[])[ \t]+', r'\1', text)
             text = re.sub(r"(?<=\w)[ \t]+('[sdm]|'re|'ve|'ll|n't)\b", r'\1', text)
             evidence = meta['raw_article_text_sha256']
+        elif meta.get('parent_text_path') and meta.get('parent_text_sha256'):
+            path = Path(meta['parent_text_path'])
+            assert hashlib.sha256(path.read_bytes()).hexdigest() == meta['parent_text_sha256']
+            text = path.read_bytes().decode('utf-8')
+            evidence = meta['parent_text_sha256']
         if text is None:
             continue
         content_hash = text_hash(text)
