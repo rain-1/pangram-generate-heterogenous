@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "generate-heterogeneous"
+version = "0.2.0"
+description = "Generate provenance-labelled human/AI mixed documents"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+prompts = ["transformers>=4.57,<6", "jinja2>=3.1"]
+verification = ["jsonschema"]
+sources = ["requests", "beautifulsoup4"]
+publishing = ["pyarrow", "jsonschema", "pyyaml", "huggingface_hub", "datasets"]
+
+[project.scripts]
+heterogeneous = "heterogeneous.cli:main"
+promptgen = "promptgen.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["heterogeneous*", "promptgen*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

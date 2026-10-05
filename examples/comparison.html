@@ -1,0 +1,107 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Human and AI · Document comparison</title><style>
+:root{color-scheme:light;--ink:#20332b;--muted:#627168;--line:#dbe3dc;
+ --human:#17623a;--human-bg:#e6f4e9;--ai:#974210;--ai-bg:#fff0df}
+*{box-sizing:border-box}body{margin:0;background:#f6f7f2;color:var(--ink);
+ font:16px/1.6 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+main{max-width:1550px;margin:0 auto;padding:48px 40px 60px}
+.eyebrow{font-size:12px;letter-spacing:.15em;text-transform:uppercase;font-weight:700;color:var(--muted)}
+h1{font-size:clamp(28px,4vw,46px);line-height:1.18;letter-spacing:-.035em;margin:12px 0}
+.intro{max-width:820px;color:var(--muted);margin:0 0 22px}
+.legend{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:30px}
+.tag{padding:6px 13px;border-radius:8px;font-size:13px;font-weight:650}
+.human{color:var(--human);background:var(--human-bg)}.ai{color:var(--ai);background:var(--ai-bg)}
+.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;align-items:start}
+.card{min-width:0;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.card-head{padding:24px 28px;border-bottom:1px solid var(--line);background:#fafcf9}
+h2{margin:0;font-size:24px;letter-spacing:-.025em}.model{font-size:13px;color:var(--muted);margin-top:5px;overflow-wrap:anywhere}
+.counts{display:flex;gap:18px;flex-wrap:wrap;margin-top:16px;font-size:13px}
+.counts strong{font-size:17px;display:block;color:var(--ink)}
+.document{padding:26px 28px 30px;font:17px/1.85 Georgia,"Times New Roman",serif;
+ white-space:pre-wrap;overflow-wrap:anywhere}
+.fragment{box-decoration-break:clone;-webkit-box-decoration-break:clone;border-radius:2px}
+.card details{border-top:1px solid var(--line);padding:16px 28px;color:var(--muted);font-size:14px}
+summary{cursor:pointer;font-weight:600}summary:focus-visible{outline:2px solid var(--human);outline-offset:5px}
+.brief{color:var(--ink);font:15px/1.7 system-ui,sans-serif;margin:14px 0 4px}
+.original{margin-top:30px;background:white;border:1px solid var(--line);border-radius:12px;padding:18px 24px}
+.original .document{padding:22px 0 4px;max-width:850px}.original .source-meta{font-size:13px;color:var(--muted);margin-top:12px}
+a{color:var(--human)}footer{font-size:13px;color:var(--muted);margin-top:28px}
+@media(max-width:1200px){.cards{grid-template-columns:1fr}.card{max-width:900px}.original{max-width:900px}}
+@media(max-width:600px){main{padding:25px 15px 36px}.card-head{padding:20px}.document{padding:20px;font-size:16px}.card details{padding:15px 20px}.original{padding:16px 20px}}
+@media print{body{background:white}main{padding:0}.cards{grid-template-columns:1fr}.card{break-inside:avoid;margin-bottom:20px}.human,.ai{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
+</style></head><body><main><div class="eyebrow">Heterogeneous text dataset · Example</div><h1>Human and AI, in the same document</h1><p class="intro">Blocks of original paragraphs were condensed into a few sentences, then expanded independently by each model. Read the complete resulting documents below.</p><div class="legend" aria-label="Authorship legend"><span class="tag human">Green · Human (non-AI)</span><span class="tag ai">Orange · AI generated</span></div><section class="cards" aria-label="Generated document comparison"><article class="card" data-record-id="d34dd386c9eea38857380257"><header class="card-head"><h2>GPT</h2><div class="model">gpt-6-luna · requested model</div><div class="counts"><div><strong>62%</strong>AI characters</div><div><strong>1</strong>replacement block</div><div><strong>3</strong>original paragraphs replaced</div></div></header><div class="document" aria-label="GPT document with colored authorship spans"><span class="fragment human" data-start="0" data-end="854" title="Human (non-AI) · jane-austen">Happy for all her maternal feelings was the day on which Mrs. Bennet got
+rid of her two most deserving daughters. With what delighted pride she
+afterwards visited Mrs. Bingley, and talked of Mrs. Darcy, may be
+guessed. I wish I could say, for the sake of her family, that the
+accomplishment of her earnest desire in the establishment of so many of
+her children produced so happy an effect as to make her a sensible,
+amiable, well-informed woman for the rest of her life; though, perhaps,
+it was lucky for her husband, who might not have relished domestic
+felicity in so unusual a form, that she still was occasionally nervous
+and invariably silly.
+
+Mr. Bennet missed his second daughter exceedingly; his affection for her
+drew him oftener from home than anything else could do. He delighted in
+going to Pemberley, especially when he was least expected.
+
+</span><span class="fragment ai" data-start="854" data-end="2233" title="AI · gpt-6-luna">After a year at Netherfield, Bingley and Jane settled on an estate near Derbyshire. The move took them farther from the familiar lanes of Hertfordshire, but not so far that friendship must depend on letters alone. Jane and Elizabeth could still visit one another with reasonable ease, and the thought of their renewed meetings softened the sadness of parting. Their new home promised Jane a life of her own, while leaving the sisters’ affection as close as ever.
+
+Kitty, meanwhile, found herself growing steadier in the company of Jane and Elizabeth. Away from Lydia’s influence, and with her elder sisters to guide her, she began to take more pleasure in conversation and less in restless excitement. Lydia repeatedly invited her to stay, but Mr. Bennet refused to encourage the visits. His decision displeased Lydia, yet it gave Kitty the chance to discover that she need not follow her youngest sister’s every whim.
+
+Mary remained at home with Mrs. Bennet, whose household seemed quieter after the others had settled into their new arrangements. She joined more of the family’s social visits, making an effort to be present where she had once preferred her books and reflections. The change appeared to cost her little: she accepted the altered company and routine without much resistance, and went about her duties with a composure that surprised no one more than her mother.</span></div><details><summary>Read the content description · 3 original paragraphs replaced</summary><p class="brief">After a year at Netherfield, Bingley and Jane move to an estate near Derbyshire, leaving Jane and Elizabeth close enough to visit. Kitty improves while spending time with her elder sisters and away from Lydia, whose invitations to stay with her their father refuses. Mary remains at home with Mrs. Bennet, joins more social visits, and seems to accept the change without much resistance.</p></details></article><article class="card" data-record-id="cff80ef66e534d0b1499df50"><header class="card-head"><h2>Claude</h2><div class="model">claude-haiku-4-5-20251001</div><div class="counts"><div><strong>71%</strong>AI characters</div><div><strong>1</strong>replacement block</div><div><strong>3</strong>original paragraphs replaced</div></div></header><div class="document" aria-label="Claude document with colored authorship spans"><span class="fragment human" data-start="0" data-end="854" title="Human (non-AI) · jane-austen">Happy for all her maternal feelings was the day on which Mrs. Bennet got
+rid of her two most deserving daughters. With what delighted pride she
+afterwards visited Mrs. Bingley, and talked of Mrs. Darcy, may be
+guessed. I wish I could say, for the sake of her family, that the
+accomplishment of her earnest desire in the establishment of so many of
+her children produced so happy an effect as to make her a sensible,
+amiable, well-informed woman for the rest of her life; though, perhaps,
+it was lucky for her husband, who might not have relished domestic
+felicity in so unusual a form, that she still was occasionally nervous
+and invariably silly.
+
+Mr. Bennet missed his second daughter exceedingly; his affection for her
+drew him oftener from home than anything else could do. He delighted in
+going to Pemberley, especially when he was least expected.
+
+</span><span class="fragment ai" data-start="854" data-end="2980" title="AI · claude-haiku-4-5-20251001">The year at Netherfield having sufficiently established Bingley&#x27;s attachment to the neighbourhood, he determined to secure a more permanent residence, and accordingly purchased an estate in Derbyshire, a county whose proximity to Pemberley and other genteel seats promised both social distinction and agreeable society. The removal occasioned little regret among those left behind at Longbourn, for the distance proved neither so great as to extinguish all intercourse nor so trifling as to render Jane and Elizabeth confined to their former sphere. Elizabeth in particular found herself liberated by this arrangement, able to visit her sister with a frequency that would have been censurable in the former situation, and to enjoy Jane&#x27;s company without the perpetual anxiety of being subject to the scrutiny of Mrs. Bennet&#x27;s designs or the careless remarks of her more vulgar relations.
+
+The separation proved most beneficial to Kitty, whose disposition had long been injured by the proximity and influence of her sister Lydia. Released from the daily pressure of that quarter&#x27;s schemes and improprieties, she discovered in the company of Jane and Elizabeth a gentler mode of conduct, one which extended even to her conduct at home and in the society of Meryton. Her father, moreover, found occasion to be inflexible in refusing those frequent and presumptuous invitations by which Lydia endeavoured to draw her away to join her own establishment, well understanding that such association could only serve to confirm the younger girl in her most objectionable habits.
+
+Mary, meanwhile, remained at Longbourn with her mother, a circumstance which might have been supposed to render her situation less agreeable; yet she submitted to the altered constitution of her family with a philosophical composure that spoke well of her temper. She even ventured more frequently into the society of their neighbours, accompanying Mrs. Bennet upon those visits which habit and civility required, and engaging with a quiet dignity that seemed to mark an acceptance, however unspoken, of the new order that had settled upon their household.</span></div><details><summary>Read the content description · 3 original paragraphs replaced</summary><p class="brief">After a year at Netherfield, Bingley and Jane move to an estate near Derbyshire, leaving Jane and Elizabeth close enough to visit. Kitty improves while spending time with her elder sisters and away from Lydia, whose invitations to stay with her their father refuses. Mary remains at home with Mrs. Bennet, joins more social visits, and seems to accept the change without much resistance.</p></details></article></section><details class="original"><summary>Read the original non-AI document</summary><div class="source-meta">jane-austen · <a href="https://www.gutenberg.org/files/1342/1342-0.txt" target="_blank" rel="noopener noreferrer">Source reference</a></div><div class="document"><span class="fragment human">Happy for all her maternal feelings was the day on which Mrs. Bennet got
+rid of her two most deserving daughters. With what delighted pride she
+afterwards visited Mrs. Bingley, and talked of Mrs. Darcy, may be
+guessed. I wish I could say, for the sake of her family, that the
+accomplishment of her earnest desire in the establishment of so many of
+her children produced so happy an effect as to make her a sensible,
+amiable, well-informed woman for the rest of her life; though, perhaps,
+it was lucky for her husband, who might not have relished domestic
+felicity in so unusual a form, that she still was occasionally nervous
+and invariably silly.
+
+Mr. Bennet missed his second daughter exceedingly; his affection for her
+drew him oftener from home than anything else could do. He delighted in
+going to Pemberley, especially when he was least expected.
+
+Mr. Bingley and Jane remained at Netherfield only a twelvemonth. So near
+a vicinity to her mother and Meryton relations was not desirable even to
+_his_ easy temper, or _her_ affectionate heart. The darling wish of his
+sisters was then gratified: he bought an estate in a neighbouring county
+to Derbyshire; and Jane and Elizabeth, in addition to every other source
+of happiness, were within thirty miles of each other.
+
+Kitty, to her very material advantage, spent the chief of her time with
+her two elder sisters. In society so superior to what she had generally
+known, her improvement was great. She was not of so ungovernable a
+temper as Lydia; and, removed from the influence of Lydia’s example, she
+became, by proper attention and management, less irritable, less
+ignorant, and less insipid. From the further disadvantage of Lydia’s
+society she was of course carefully kept; and though Mrs. Wickham
+frequently invited her to come and stay with her, with the promise of
+balls and young men, her father would never consent to her going.
+
+Mary was the only daughter who remained at home; and she was necessarily
+drawn from the pursuit of accomplishments by Mrs. Bennet’s being quite
+unable to sit alone. Mary was obliged to mix more with the world, but
+she could still moralize over every morning visit; and as she was no
+longer mortified by comparisons between her sisters’ beauty and her own,
+it was suspected by her father that she submitted to the change without
+much reluctance.</span></div></details><footer>Colors follow the exact construction spans. They are known labels, not detector predictions. Hover over a passage to see its author. This file opens offline in a browser.</footer></main></body></html>

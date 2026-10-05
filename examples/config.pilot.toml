@@ -1,0 +1,33 @@
+# Small, actual subscription-backed example; check these IDs are available to you.
+[dataset]
+seed = 42
+variants_per_source = 1
+unit = "paragraph"
+mode = "random"
+block_sizes = [3]
+min_blocks = 1
+max_blocks = 1
+max_replaced_fraction = 0.8
+summary_min_sentences = 2
+summary_max_sentences = 3
+context_chars = 0
+
+[summarizer]
+name = "briefs"
+kind = "codex"
+model = "gpt-6-luna"
+concurrency = 1
+
+[[generators]]
+name = "codex"
+kind = "codex"
+model = "gpt-6-luna"
+family = "openai"
+concurrency = 1
+
+[[generators]]
+name = "claude"
+kind = "claude"
+model = "claude-haiku-4-5-20251001"
+family = "anthropic"
+concurrency = 1

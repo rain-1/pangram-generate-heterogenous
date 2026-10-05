@@ -1,0 +1,101 @@
+{
+  "samples_per_condition": 100,
+  "temperatures": [
+    0.7,
+    1.0
+  ],
+  "top_p": 0.95,
+  "user_max_tokens": 1024,
+  "jobs": 16,
+  "port": 18081,
+  "assistant_controls": true,
+  "models": [
+    {
+      "name": "seed-oss",
+      "lab": "ByteDance",
+      "model": "ByteDance-Seed/Seed-OSS-36B-Instruct"
+    },
+    {
+      "name": "ernie",
+      "lab": "Baidu",
+      "model": "baidu/ERNIE-4.5-21B-A3B-PT",
+      "model_options": {
+        "stop_strings": [
+          "\nAssistant:",
+          "\nUser:"
+        ]
+      }
+    },
+    {
+      "name": "kimi-linear",
+      "lab": "Moonshot",
+      "model": "moonshotai/Kimi-Linear-48B-A3B-Instruct",
+      "model_options": {
+        "trust_remote_code": true
+      },
+      "server_args": [
+        "--trust-remote-code"
+      ]
+    },
+    {
+      "name": "minimax",
+      "lab": "MiniMax",
+      "model": "MiniMaxAI/MiniMax-M2.7",
+      "model_options": {
+        "stop_strings": [
+          "]~b]",
+          "[e~["
+        ]
+      },
+      "server_args": [
+        "--trust-remote-code"
+      ]
+    },
+    {
+      "name": "ling",
+      "lab": "Ant / inclusionAI",
+      "model": "inclusionAI/Ling-3.0-flash-fp8",
+      "server_args": [
+        "--trust-remote-code"
+      ]
+    },
+    {
+      "name": "mimo",
+      "lab": "Xiaomi",
+      "model": "XiaomiMiMo/MiMo-V2.6-Flash-RL",
+      "server_args": [
+        "--trust-remote-code",
+        "--language-model-only"
+      ]
+    },
+    {
+      "name": "deepseek",
+      "lab": "DeepSeek",
+      "model": "deepseek-ai/DeepSeek-V4-Flash-0731",
+      "model_options": {
+        "encoder": "deepseek_v4"
+      },
+      "server_args": [
+        "--tokenizer-mode",
+        "deepseek_v4",
+        "--trust-remote-code",
+        "--block-size",
+        "256"
+      ]
+    },
+    {
+      "name": "inkling",
+      "lab": "Thinking Machines",
+      "model": "thinkingmachines/Inkling-Small-NVFP4",
+      "model_options": {
+        "encoder": "inkling"
+      },
+      "server_args": [
+        "--tokenizer-mode",
+        "inkling",
+        "--trust-remote-code",
+        "--language-model-only"
+      ]
+    }
+  ]
+}

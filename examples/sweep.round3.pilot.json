@@ -1,0 +1,63 @@
+{
+  "samples_per_condition": 10,
+  "temperatures": [
+    0.7,
+    1.0
+  ],
+  "top_p": 0.95,
+  "user_max_tokens": 1024,
+  "jobs": 4,
+  "port": 18082,
+  "max_model_len": 4096,
+  "gpu_memory_utilization": 0.9,
+  "assistant_controls": true,
+  "models": [
+    {
+      "name": "granite",
+      "lab": "IBM",
+      "model": "ibm-granite/granite-4.2-30b"
+    },
+    {
+      "name": "ling-bf16",
+      "lab": "Ant / inclusionAI",
+      "model": "inclusionAI/Ling-3.0-flash",
+      "server_args": [
+        "--trust-remote-code",
+        "--dtype",
+        "bfloat16",
+        "--max-num-seqs",
+        "8"
+      ]
+    },
+    {
+      "name": "mistral-small4",
+      "lab": "Mistral",
+      "model": "mistralai/Mistral-Small-4-119B-2603",
+      "ignore_patterns": [
+        "consolidated*.safetensors"
+      ],
+      "server_pythonpath": "/home/user/.cache/magpie-sweep-20261003/compat-transformers-5.16.0",
+      "server_args": [
+        "--language-model-only",
+        "--tokenizer-mode",
+        "hf",
+        "--load-format",
+        "safetensors",
+        "--max-num-seqs",
+        "8"
+      ]
+    },
+    {
+      "name": "nemotron-super",
+      "lab": "NVIDIA",
+      "model": "nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-BF16",
+      "server_args": [
+        "--trust-remote-code",
+        "--dtype",
+        "bfloat16",
+        "--max-num-seqs",
+        "8"
+      ]
+    }
+  ]
+}

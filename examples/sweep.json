@@ -1,0 +1,18 @@
+{
+  "samples_per_condition": 100,
+  "temperatures": [0.7, 1.0],
+  "top_p": 0.95,
+  "user_max_tokens": 1024,
+  "jobs": 16,
+  "port": 18080,
+  "models": [
+    {"name": "qwen", "lab": "Alibaba", "model": "Qwen/Qwen3.6-35B-A3B", "server_args": ["--language-model-only"]},
+    {"name": "olmo", "lab": "Ai2", "model": "allenai/Olmo-3.1-32B-Instruct"},
+    {"name": "glm", "lab": "Z.ai", "model": "zai-org/GLM-4.7-Flash"},
+    {"name": "nemotron", "lab": "NVIDIA", "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16"},
+    {"name": "gemma", "lab": "Google", "model": "google/gemma-4-31B-it", "server_args": ["--language-model-only"]},
+    {"name": "gpt-oss", "lab": "OpenAI", "model": "openai/gpt-oss-120b"},
+    {"name": "ministral", "lab": "Mistral", "model": "mistralai/Ministral-3-14B-Instruct-2512", "server_args": ["--language-model-only"]},
+    {"name": "llama", "lab": "Meta", "model": "meta-llama/Llama-3.3-70B-Instruct"}
+  ]
+}

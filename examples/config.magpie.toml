@@ -1,0 +1,23 @@
+[model]
+# The tokenizer must match the checkpoint served by vLLM, even if it has an alias.
+model = "Qwen/Qwen2.5-7B-Instruct"
+tokenizer = "Qwen/Qwen2.5-7B-Instruct"
+base_url = "http://127.0.0.1:8000/v1"
+# For a frozen dataset, set revision and tokenizer_revision to commit hashes.
+# revision = "..."
+# tokenizer_revision = "..."
+
+[generation]
+method = "magpie"
+count = 100
+user_turns = 1
+emit_final_response = false
+seed = 42
+attempts = 3
+temperature = 1.0
+top_p = 0.95
+user_max_tokens = 1024
+response_max_tokens = 2048
+# Set user_turns = 2 to synthesize user -> assistant -> next user.
+# Or supply --input examples/conversations.jsonl to generate follow-ups to seeds.
+# Optional system_prompt conditions MAGPIE; leave absent for vanilla MAGPIE.

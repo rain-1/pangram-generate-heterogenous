@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Heterogeneous AI Spans · Document review</title>
+<style>
+:root{color-scheme:light;--ink:#1f392b;--muted:#64766b;--line:#dce5dc;--green:#e5f2e7;--orange:#ffead5}
+*{box-sizing:border-box}body{margin:0;background:#f3f6f1;color:var(--ink);font:16px/1.6 system-ui,sans-serif}
+main{max-width:1200px;margin:auto;padding:36px 32px 70px}.eyebrow{font-size:12px;letter-spacing:2px;font-weight:700;color:var(--muted)}
+h1{font-size:clamp(28px,4vw,43px);line-height:1.2;letter-spacing:-1px;margin:12px 0}h2{font-size:25px;line-height:1.3;margin:8px 0}
+p{margin:10px 0}a{color:#24673c}.intro{max-width:840px;color:var(--muted)}.stats{display:flex;gap:30px;flex-wrap:wrap;margin:22px 0}
+.stats strong{display:block;font-size:26px;color:var(--ink)}.stats span{font-size:13px;color:var(--muted)}
+.legend{display:flex;gap:12px;flex-wrap:wrap;margin:16px 0 25px}.tag{padding:5px 12px;border-radius:6px;font-size:13px}.human{background:var(--green);color:#235c35}.ai{background:var(--orange);color:#8c4310}
+.filters{display:grid;grid-template-columns:repeat(4,1fr) 1.5fr;gap:12px;padding:18px;background:white;border:1px solid var(--line);border-radius:12px}
+label{display:block;font-size:12px;font-weight:650}select,input,button{font:inherit;color:inherit}select,input{display:block;width:100%;padding:9px 10px;background:#fff;border:1px solid #b7c9bb;border-radius:7px;margin-top:5px;min-width:0}
+button{border:1px solid #b7c9bb;background:white;border-radius:7px;padding:8px 13px;cursor:pointer}button:disabled{opacity:.35;cursor:default}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #327d48;outline-offset:2px}
+.navigation{display:grid;grid-template-columns:auto 1fr auto;align-items:end;gap:12px;margin:18px 0}.position{font-size:13px;color:var(--muted);margin:5px 0}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden}.card header{padding:24px 30px;border-bottom:1px solid var(--line);background:#fbfcfa}
+.meta{font-size:13px;color:var(--muted);overflow-wrap:anywhere}.doc{padding:28px 30px;font:18px/1.85 Georgia,serif;white-space:pre-wrap;overflow-wrap:anywhere}
+.fragment{border-radius:2px;box-decoration-break:clone;-webkit-box-decoration-break:clone}details{padding:18px 30px;border-top:1px solid var(--line)}summary{font-weight:650;cursor:pointer}
+.brief{margin:12px 0;white-space:pre-wrap}.original{background:#f5faf4;padding:20px;margin-top:15px;border-radius:8px;white-space:pre-wrap;font:16px/1.8 Georgia,serif}
+.empty{padding:40px;text-align:center;background:#fff;border-radius:12px}footer{margin-top:28px;font-size:13px;color:var(--muted)}
+@media(max-width:850px){.filters{grid-template-columns:repeat(2,1fr)}.filters label:last-child{grid-column:1/-1}.navigation{grid-template-columns:auto 1fr auto}}
+@media(max-width:550px){main{padding:22px 14px}.card header,.doc,details{padding:20px}.doc{font-size:17px}.stats{gap:18px}.stats strong{font-size:22px}}
+</style>
+</head>
+<body><main>
+<div class="eyebrow">OPEN TEXT DETECTOR · DATASET REVIEW · V{{VERSION}}</div>
+<h1>Human and AI, in the same document.</h1>
+<p class="intro">Read the exact mixed documents, with each generated block attributed to its writer. This review is self-contained and works offline. Filter the collection below, then choose a document.</p>
+<div class="stats"><div><strong>{{TOTAL}}</strong><span>Mixed documents</span></div><div><strong>{{TOTAL}}</strong><span>Matched controls</span></div><div><strong>{{SPAN_TOTAL}}</strong><span>Generated spans</span></div><div><strong>{{TOTAL}}</strong><span>Source passages</span></div></div>
+<div class="legend"><span class="tag human">Green · retained human text</span><span class="tag ai">Orange · generated AI text</span></div>
+<div class="filters">
+<label>Documents<select id="kind"><option value="mixed">Mixed documents</option><option value="human_control">Human controls</option><option value="">All records</option></select></label>
+<label>Cohort<select id="cohort"><option value="">All cohorts</option><option value="original">Original batch</option><option value="ml_papers">ML papers · 2000–2014</option>{{EXPANSION_OPTION}}</select></label>
+<label>Writer<select id="writer"><option value="">All writers</option><option value="haiku">Haiku</option><option value="sonnet">Sonnet</option><option value="opus">Current Opus</option><option value="opus3">Opus 3</option></select></label>
+<label>Split<select id="split"><option value="">All splits</option><option value="train">Train</option><option value="validation">Validation</option><option value="test">Test</option></select></label>
+<label>Search title or ID<input id="search" type="search" placeholder="Alice, collaborative filtering…"></label>
+</div>
+<div class="navigation"><button id="previous" type="button">← Previous</button><label>Document<select id="document"></select><div class="position" id="position" role="status"></div></label><button id="next" type="button">Next →</button></div>
+<article class="card" id="card"><header><div class="meta" id="identity"></div><h2 id="title"></h2><div class="meta" id="metadata"></div><a id="sourceLink" target="_blank" rel="noopener noreferrer">Open upstream source</a></header>
+<div class="doc" id="text" aria-label="Document with exact colored authorship spans"></div>
+<details><summary>Content briefs used for the AI replacements</summary><div id="briefs"></div></details>
+<details><summary>Original retained source passage</summary><div class="original" id="original"></div></details></article>
+<div class="empty" id="empty" hidden>No documents match these filters.</div>
+<footer>Green text retains its documented human-origin candidate status; it is not independently certified wording. Opus 3 is attributed to the selected browser UI label, with its exact checkpoint unreported. Factual drift and replacement length are nonblocking. Offsets count Unicode code points.<br><a href="../README.md">Dataset card</a> · <a href="../schema/README.md">Schema guide</a> · <a href="../manifest/release.json">Release manifest</a></footer>
+</main>
+<script type="application/json" id="records">{{RECORDS}}</script>
+<script>
+'use strict';
+const records=JSON.parse(document.getElementById('records').textContent);
+const el=id=>document.getElementById(id);
+let filtered=[],index=0;
+function render(){
+ const row=filtered[index];el('card').hidden=!row;el('empty').hidden=!!row;
+ el('previous').disabled=!row||index===0;el('next').disabled=!row||index===filtered.length-1;
+ el('document').disabled=!row;el('document').value=String(index);
+ el('position').textContent=row?`${index+1} of ${filtered.length} matching records`:`0 matching records`;
+ if(!row)return;
+ el('title').textContent=row.source_title||row.source_dataset;
+ el('identity').textContent=row.kind==='mixed'?`${row.reported_model} · ${{original:'Original batch',ml_papers:'ML papers',expansion:'New expansion'}[row.cohort]}`:'Unchanged human control';
+ el('metadata').textContent=`${row.source_author||'Source author not individually identified'} · ${row.split} · ${row.id}`;
+ const link=el('sourceLink');link.hidden=!/^https?:\/\//.test(row.source_reference);link.href=link.hidden?'#':row.source_reference;
+ const points=Array.from(row.text);const pieces=document.createDocumentFragment();
+ for(const s of row.spans){const node=document.createElement('span');node.className=`fragment ${s.label}`;
+  node.dataset.start=String(s.start);node.dataset.end=String(s.end);
+  node.title=`${s.label==='ai'?'AI · '+s.reported_model:'Human · '+(s.author_id||'source candidate')} · [${s.start}:${s.end}]`;
+  node.textContent=points.slice(s.start,s.end).join('');pieces.appendChild(node);}
+ el('text').replaceChildren(pieces);el('original').textContent=row.source_text;
+ const briefs=document.createDocumentFragment();for(const brief of row.briefs){const p=document.createElement('p');p.className='brief';p.textContent=brief;briefs.appendChild(p);}
+ if(!row.briefs.length){const p=document.createElement('p');p.textContent='This unchanged control has no generated replacements.';briefs.appendChild(p);}
+ el('briefs').replaceChildren(briefs);
+}
+function refresh(){
+ const q=el('search').value.trim().toLowerCase();
+ filtered=records.filter(r=>(!el('kind').value||r.kind===el('kind').value)&&(!el('cohort').value||r.cohort===el('cohort').value)&&(!el('writer').value||r.generator_backend===el('writer').value)&&(!el('split').value||r.split===el('split').value)&&(!q||`${r.source_title||''} ${r.id}`.toLowerCase().includes(q)));
+ index=0;el('document').replaceChildren(...filtered.map((r,i)=>new Option(`${i+1}. ${r.source_title||r.source_dataset} · ${r.generator_backend||'control'}`,String(i))));render();
+}
+for(const id of ['kind','cohort','writer','split'])el(id).addEventListener('change',refresh);
+el('search').addEventListener('input',refresh);el('document').addEventListener('change',()=>{index=Number(el('document').value);render();});
+el('previous').addEventListener('click',()=>{if(index>0){index--;render();}});el('next').addEventListener('click',()=>{if(index<filtered.length-1){index++;render();}});
+refresh();
+</script></body></html>

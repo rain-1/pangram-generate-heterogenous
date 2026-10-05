@@ -1,0 +1,71 @@
+# Edit the model IDs for your accounts/server. The CLI never silently chooses a model.
+# Plan is free of model calls; run a small pilot before generating the full corpus.
+[dataset]
+seed = 42
+variants_per_source = 2
+include_human_controls = true
+unit = "paragraph"          # groups of consecutive paragraphs
+mode = "random"             # random blocks or alternating chunks
+block_sizes = [3, 4, 6]       # paragraphs per replacement block
+min_blocks = 1
+max_blocks = 3
+max_replaced_fraction = 0.6  # source character fraction; random mode only
+summary_min_sentences = 2
+summary_max_sentences = 3
+context_chars = 0           # strict bottleneck; optionally allow neighbouring context
+copy_ngram = 8
+max_copy_fraction = 0.15
+quality_attempts = 3
+train_fraction = 0.8
+validation_fraction = 0.1
+test_fraction = 0.1
+
+# A single summarizer produces shared briefs for all generators.
+[summarizer]
+name = "briefs"
+kind = "codex"
+model = "YOUR_CODEX_MODEL_ID"
+concurrency = 1
+timeout_seconds = 300
+retries = 2
+
+[[generators]]
+name = "codex"
+kind = "codex"
+model = "YOUR_CODEX_MODEL_ID"
+family = "openai"
+concurrency = 1
+
+[[generators]]
+name = "claude"
+kind = "claude"
+model = "YOUR_CLAUDE_MODEL_ID"
+family = "anthropic"
+concurrency = 1
+
+[[generators]]
+name = "local"
+kind = "openai-compatible"
+base_url = "http://127.0.0.1:8000/v1"
+api_key_env = "VLLM_API_KEY"   # optional for an unauthenticated local server
+model = "YOUR_SERVED_MODEL_ID"
+family = "YOUR_MODEL_FAMILY"
+revision = "YOUR_WEIGHTS_COMMIT_SHA"
+temperature = 0.8
+max_tokens = 4096
+concurrency = 8
+# To disable thinking for a model/chat template that supports it:
+# extra_body = {chat_template_kwargs = {enable_thinking = false}}
+
+[[generators]]
+name = "openrouter"
+kind = "openrouter"
+base_url = "https://openrouter.ai/api/v1"
+api_key_env = "OPENROUTER_API_KEY"
+model = "YOUR_AUTHOR/MODEL_SLUG"
+family = "YOUR_MODEL_FAMILY"
+temperature = 0.8
+max_tokens = 4096
+concurrency = 4
+# Optionally pin the serving provider; no cross-model fallbacks are enabled.
+# extra_body = {provider = {order = ["YOUR_PROVIDER"], allow_fallbacks = false}}
