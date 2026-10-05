@@ -13,6 +13,43 @@ The Python 3.11+ CLI has no runtime dependencies. It supports Codex and Claude
 Code subscriptions through their installed CLIs, OpenRouter, and an
 OpenAI-compatible server such as vLLM on your GPU machine.
 
+## Dataset viewer
+
+Run the local explorer, then open **http://127.0.0.1:8770**:
+
+```bash
+python -m heterogeneous viewer
+```
+
+It loads the newest release under `releases/` by default. Human spans are green
+and AI spans are orange. Filter by model, collection, batch, split or document
+type; search titles/authors/IDs; or use **Find by ID** for an exact lookup.
+**Compare original** aligns each replacement with the source passage it replaced.
+Select a passage to inspect its author, coordinates, brief and generation prompts.
+You can open its matched human control, download the original JSON record, or
+copy a link to the selected document and comparison mode.
+
+Supply a run/release directory or JSONL file explicitly, or several datasets to
+switch between snapshots:
+
+```bash
+python -m heterogeneous viewer runs/heterogeneous-20261005-with-gpt
+python -m heterogeneous viewer releases/heterogeneous-ai-spans-v1.2.0 releases/heterogeneous-ai-spans-v1.1.0
+```
+
+To load the published dataset directly (the first run downloads the JSONL):
+
+```bash
+pip install -e '.[viewer]'
+python -m heterogeneous viewer --repo open-text-detector/heterogeneous-ai-spans --revision v1.2.0
+```
+
+The viewer serves read-only data on localhost and does not modify dataset files.
+It accepts full provenance JSONL and flat export JSONL with source/output span
+coordinates. Model filters also find matched human controls; those controls
+remain labelled as human. Span positions count Unicode code points, including
+emoji correctly. Use `--port` to choose a different port.
+
 ## Connection to Pangram 4
 
 [Pangram 4, §2.2](https://arxiv.org/html/2607.27183v1#S2.SS2) uses topic briefs

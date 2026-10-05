@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Human / AI — Dataset Explorer</title>
+  <link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script>
+</head>
+<body>
+  <header class="app-header">
+    <a class="brand" href="/" aria-label="Dataset Explorer home"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span>Human / AI<small>DATASET EXPLORER</small></span></a>
+    <div class="dataset-select"><label for="dataset">Dataset</label><select id="dataset" aria-label="Dataset"></select></div>
+    <div id="dataset-stats" class="dataset-stats"></div>
+    <button id="lookup" class="button subtle">Find by ID <kbd>/</kbd></button>
+  </header>
+  <main class="workspace">
+    <aside class="sidebar" aria-label="Browse documents">
+      <div class="filters">
+        <div class="section-label"><span>EXPLORE DOCUMENTS</span><button id="reset" class="text-button">Reset</button></div>
+        <label class="search-box"><span class="sr-only">Search documents</span><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Title, author, or ID…" autocomplete="off"></label>
+        <label class="filter full">AI model<select id="model" aria-label="AI model"><option value="">All models</option></select></label>
+        <div class="filter-grid">
+          <label class="filter">Collection<select id="collection" aria-label="Collection"><option value="">All collections</option></select></label>
+          <label class="filter">Batch<select id="cohort" aria-label="Batch"><option value="">All batches</option></select></label>
+          <label class="filter">Document type<select id="kind" aria-label="Document type"><option value="mixed">Mixed documents</option><option value="human_control">Human controls</option><option value="">All documents</option></select></label>
+          <label class="filter">Split<select id="split" aria-label="Split"><option value="">All splits</option></select></label>
+        </div>
+      </div>
+      <div class="results-heading"><span id="result-count" role="status">Loading dataset…</span><button id="random" class="text-button" title="Choose a random document from the filtered results">Shuffle ↗</button></div>
+      <div id="record-list" class="record-list" aria-label="Document results"></div>
+      <div class="pagination"><button id="previous-page" class="button subtle" aria-label="Previous page">←</button><span id="page-info"></span><button id="next-page" class="button subtle" aria-label="Next page">→</button></div>
+    </aside>
+    <section class="reader" aria-label="Selected document">
+      <div id="empty" class="empty"><div class="empty-symbol">¶</div><h1>Look closely at the text.</h1><p>Select a document to see exactly where human writing ends and generated writing begins.</p></div>
+      <article id="document" hidden>
+        <div class="document-heading">
+          <div class="eyebrow" id="document-eyebrow"></div>
+          <h1 id="document-title"></h1><p id="document-author" class="byline"></p>
+          <div class="document-id"><code id="document-id"></code><button id="copy-id" class="text-button">Copy ID</button></div>
+          <div class="document-meta" id="document-meta"></div>
+          <div class="document-actions"><a id="source-link" class="text-button" target="_blank" rel="noopener noreferrer" hidden>View source ↗</a><button id="copy-link" class="text-button">Copy link</button><a id="export" class="text-button" download>Download JSON ↓</a><span id="pairs"></span></div>
+        </div>
+        <div class="reading-toolbar">
+          <div class="segmented" aria-label="Reading mode"><button id="mode-document" aria-pressed="true">Document</button><button id="mode-compare" aria-pressed="false">Compare original</button></div>
+          <label class="toggle"><input id="color-spans" type="checkbox" checked>Color spans</label>
+          <button id="next-ai" class="button subtle">Next AI span ↓</button>
+        </div>
+        <div class="reading-key"><span><i class="dot human-dot"></i>Human · retained source</span><span><i class="dot ai-dot"></i>AI · generated replacement</span><span class="key-hint">Select a passage for details</span></div>
+        <div class="compare-heading" id="compare-heading" hidden><div>Original source <small id="original-caption">Before replacement</small></div><div><span id="output-heading">Mixed document</span><small id="output-caption">After replacement</small></div></div>
+        <div id="passages" class="passages"></div>
+        <div class="reader-footer">Colors show construction provenance. “Human” refers to retained source text; source verification is recorded separately.</div>
+      </article>
+      <div id="reader-loading" class="loading" hidden role="status">Loading document…</div>
+    </section>
+    <aside class="inspector" aria-label="Passage details">
+      <div class="section-label"><span>PASSAGE DETAILS</span><button id="close-inspector" class="text-button" aria-label="Close passage details">×</button></div>
+      <div id="inspection"><div class="inspection-empty"><span class="inspection-symbol">↖</span><h2>Follow the provenance.</h2><p>Select any passage to inspect its author and exact span. AI passages include the brief and prompts used to generate them.</p></div></div>
+    </aside>
+  </main>
+  <dialog id="lookup-dialog"><form id="lookup-form"><div class="dialog-header"><h2>Find a document</h2><button type="button" id="close-dialog" class="button subtle" aria-label="Close dialog">×</button></div><p>Paste an exact document ID from this dataset. This search ignores the current filters.</p><label class="filter">Document ID<input id="lookup-id" required autocomplete="off" placeholder="Document ID…"></label><p id="lookup-error" class="error" role="alert"></p><button type="submit" class="button primary">Open document →</button></form></dialog>
+  <div id="toast" class="toast" hidden role="status"></div>
+  <noscript>This viewer requires JavaScript.</noscript>
+</body>
+</html>

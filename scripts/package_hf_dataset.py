@@ -218,7 +218,10 @@ def build(out, repo_id, combined=COMBINED, version='1.2.0', previous_release=Non
     write_json(out / 'manifest/portable-metadata-changes.json', dict(counts))
     for directory in ['heterogeneous', 'scripts', 'tests', 'examples']:
         for path in (ROOT / directory).rglob('*'):
-            if path.is_file() and (path.suffix in ['.py', '.toml'] or path.parent==ROOT/'examples' and path.name in ['config.gpt-expansion.json','quotas.gpt-expansion.json']):
+            is_code = path.suffix in ['.py', '.toml']
+            is_viewer_asset = path.parent == ROOT/'heterogeneous/viewer_assets' and path.suffix in ['.html', '.css', '.js']
+            is_config = path.parent == ROOT/'examples' and path.name in ['config.gpt-expansion.json', 'quotas.gpt-expansion.json']
+            if path.is_file() and (is_code or is_viewer_asset or is_config):
                 dest = out / 'reproduction' / path.relative_to(ROOT)
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(path, dest)

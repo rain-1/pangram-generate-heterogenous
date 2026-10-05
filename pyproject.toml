@@ -14,6 +14,7 @@ prompts = ["transformers>=4.57,<6", "jinja2>=3.1"]
 verification = ["jsonschema"]
 sources = ["requests", "beautifulsoup4"]
 publishing = ["pyarrow", "jsonschema", "pyyaml", "huggingface_hub", "datasets"]
+viewer = ["huggingface_hub"]
 
 [project.scripts]
 heterogeneous = "heterogeneous.cli:main"
@@ -21,6 +22,9 @@ promptgen = "promptgen.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["heterogeneous*", "promptgen*"]
+
+[tool.setuptools.package-data]
+heterogeneous = ["viewer_assets/*.html", "viewer_assets/*.css", "viewer_assets/*.js"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

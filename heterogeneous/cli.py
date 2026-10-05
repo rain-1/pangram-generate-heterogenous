@@ -38,6 +38,12 @@ def parser() -> argparse.ArgumentParser:
     command.add_argument("dataset", type=Path)
     command.add_argument("--output", type=Path, required=True)
     command.add_argument("--limit", type=int, default=10, help="maximum mixed documents to display")
+    command = commands.add_parser("viewer", help="explore local JSONL datasets with colored spans and original-text comparison")
+    command.add_argument("datasets", nargs="*", type=Path, help="JSONL files or release/run directories; defaults to the latest local release")
+    command.add_argument("--repo", help="download records/all.jsonl from a Hugging Face dataset (requires huggingface_hub)")
+    command.add_argument("--revision", default="main", help="Hub revision when using --repo")
+    command.add_argument("--host", default="127.0.0.1")
+    command.add_argument("--port", type=int, default=8770)
     command = commands.add_parser("evaluate", help="compare predicted spans with gold spans")
     command.add_argument("--gold", type=Path, required=True)
     command.add_argument("--predictions", type=Path, required=True)
@@ -50,7 +56,11 @@ def main(argv: list[str] | None = None) -> None:
     try:
         if hasattr(args, "jobs") and args.jobs < 1:
             raise ValueError("--jobs must be positive")
-        if args.command == "validate":
+        if args.command == "viewer":
+            from .viewer import serve
+            serve(args.datasets, args.host, args.port, args.repo, args.revision)
+            return
+        elif args.command == "validate":
             report = validate_dataset(read_jsonl(args.dataset))
         elif args.command == "html":
             from .html import render_html
