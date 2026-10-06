@@ -3,7 +3,7 @@
     python examples/load_and_inspect.py --verify-all
     python examples/load_and_inspect.py --model opus3 --limit 2
 
-Requires only the Python standard library. Model names are haiku/sonnet/opus/opus3.
+Requires only the Python standard library. Model names include haiku/sonnet/opus/opus3/gpt_sol/gpt_luna.
 """
 import argparse
 import hashlib
@@ -36,7 +36,7 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument('--input', type=Path, default=Path(__file__).resolve().parents[1]/'records/all.jsonl')
     p.add_argument('--verify-all', action='store_true')
-    p.add_argument('--model', choices=['haiku','sonnet','opus','opus3'])
+    p.add_argument('--model', choices=['haiku','sonnet','opus','opus3','gpt_sol','gpt_luna'])
     p.add_argument('--limit', type=int, default=1)
     a = p.parse_args(); checked = shown = 0
     with a.input.open(encoding='utf-8') as handle:

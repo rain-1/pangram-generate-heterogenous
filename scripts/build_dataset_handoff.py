@@ -12,9 +12,11 @@ from heterogeneous.core import read_jsonl, write_json, write_jsonl, atomic_text
 from heterogeneous.pipeline import validate_dataset
 
 
-def build(runs, out):
+def build(runs, out, cohort_names=None):
+    if cohort_names is not None and (len(cohort_names) != len(runs) or len(set(cohort_names)) != len(cohort_names)):
+        raise ValueError('Provide one unique cohort name for each run')
     records = []; cohorts = []
-    for run in runs:
+    for index, run in enumerate(runs):
         audit = json.loads((run / 'detector-quality-audit.json').read_text())
         parent = json.loads((run / 'parent-copy-audit.json').read_text())
         assert audit['complete'] and audit['integrity_checks'] == 'pass'
@@ -24,7 +26,7 @@ def build(runs, out):
         data = read_jsonl(run / 'dataset.jsonl')
         assert all(r['construction']['plan_id'] == audit['plan_id'] for r in data)
         records.extend(data)
-        name = ('gpt_ml_papers' if 'gpt-ml-papers' in run.name else
+        name = cohort_names[index] if cohort_names is not None else ('gpt_ml_papers' if 'gpt-ml-papers' in run.name else
                 'gpt_general' if 'gpt-general' in run.name else
                 'expansion' if 'expansion' in run.name else
                 'ml_papers' if 'ml-papers' in run.name else 'original')
@@ -68,7 +70,7 @@ def build(runs, out):
     for run,cohort in zip(runs,cohorts):
         relative=Path(os.path.relpath(run,out)).as_posix()
         label={'original':'Original four-model batch','ml_papers':'Pre-2015 ML papers','expansion':'Three-model expansion',
-               'gpt_general':'GPT general documents','gpt_ml_papers':'GPT pre-2015 ML papers'}[cohort['name']]
+               'gpt_general':'GPT general documents','gpt_ml_papers':'GPT pre-2015 ML papers'}.get(cohort['name'],cohort['name'].replace('_',' ').title())
         links.append(f'<section><h2>{label}</h2><p>{cohort["mixed"]} mixed documents + {cohort["controls"]} unchanged controls.</p>'
                      f'<a href="{relative}/review.html">Open all colored documents</a> · '
                      f'<a href="{relative}/detector-quality-audit.json">Integrity audit</a> · '
@@ -81,7 +83,7 @@ section{padding:20px;margin:20px 0;background:white;border:1px solid #dbe3dc;bor
 <main><h1>'''+str(total)+''' mixed documents, ready to inspect</h1><p>'''+str(total)+''' different source passages, plus '''+str(total)+''' matched unchanged controls. Exact Unicode character spans retain the source author and AI writer.</p>
 <p><span class="human">Green · retained human text</span> <span class="ai">Orange · generated AI text</span></p>
 <table><thead><tr><th>Writer</th>'''+''.join(f'<th>{escape(c["name"])}</th>' for c in cohorts)+'''<th>Total mixed</th></tr></thead><tbody>'''+''.join(rows)+'''</tbody></table>
-<p>Complete span/provenance audits and full-parent copy checks pass. The modern-model probes were read and the paper extraction was checked against five rendered PDF pages.</p>'''+''.join(links)+'''
+<p>Complete span/provenance audits and full-parent copy checks pass. The model probes and paper extraction spot checks are documented in the cohort audits.</p>'''+''.join(links)+'''
 <section><h2>Combined downloads</h2><p><a href="mixed.jsonl">'''+str(total)+''' mixed documents · JSONL</a> · <a href="human-controls.jsonl">'''+str(total)+''' controls · JSONL</a> · <a href="dataset.jsonl">All '''+str(len(records))+''' records · JSONL</a> · <a href="manifest.json">Manifest and hashes</a></p><p>Existing train/validation/test assignments are preserved and checked across all cohorts.</p></section>
 <p><small>Paper sources were published in 2000–2014. Human-origin labels retain the documented-provenance caveat. Opus 3 attribution is the selected browser UI label; the exact checkpoint is unreported. Factual drift and length differences are nonblocking for this detector dataset.</small></p></main></html>'''
     atomic_text(out/'index.html',page)
@@ -89,4 +91,6 @@ section{padding:20px;margin:20px 0;background:white;border:1px solid #dbe3dc;bor
 
 
 if __name__=='__main__':
-    p=argparse.ArgumentParser();p.add_argument('--runs',nargs='+',type=Path,required=True);p.add_argument('--out',type=Path,required=True);a=p.parse_args();build(a.runs,a.out)
+    p=argparse.ArgumentParser();p.add_argument('--runs',nargs='+',type=Path,required=True);p.add_argument('--out',type=Path,required=True)
+    p.add_argument('--cohort-names',nargs='+',help='One unique portable cohort name per input run.')
+    a=p.parse_args();build(a.runs,a.out,a.cohort_names)

@@ -125,7 +125,9 @@ def matches(record, config):
             or config == 'ml_papers_mixed' and mixed and record['source_dataset'] == 'jmlr_pre2015'
             or config == 'expansion_mixed' and mixed and record['cohort'] == 'expansion'
             or config == 'gpt_general_mixed' and mixed and record['cohort'] == 'gpt_general'
-            or config == 'gpt_ml_papers_mixed' and mixed and record['cohort'] == 'gpt_ml_papers')
+            or config == 'gpt_ml_papers_mixed' and mixed and record['cohort'] == 'gpt_ml_papers'
+            or config == 'overnight_mixed' and mixed and record['cohort'].startswith('overnight_batch_')
+            or config not in CONFIGS and config.endswith('_mixed') and mixed and record['cohort'] == config[:-6])
 
 
 def build(out, repo_id, combined=COMBINED, version='1.2.0', previous_release=None):
@@ -142,8 +144,9 @@ def build(out, repo_id, combined=COMBINED, version='1.2.0', previous_release=Non
         name=cohort.get('name') or ('original' if 'opus3' in cohort['models'] else 'ml_papers')
         assert name not in runs
         runs[name]=Path(cohort['directory']);cohort_names[cohort['plan_id']]=name
-    configs=CONFIGS+(['expansion_mixed'] if 'expansion' in runs else [])
-    configs += [f'{name}_mixed' for name in ['gpt_general','gpt_ml_papers'] if name in runs]
+    configs=CONFIGS+[f'{name}_mixed' for name in runs if name not in ['original','ml_papers']]
+    overnight=[name for name in runs if name.startswith('overnight_batch_')]
+    if overnight:configs.append('overnight_mixed')
     counts = Counter()
     records = [portable_record(r, counts) for r in raw]
     preserved_previous=0
@@ -255,7 +258,30 @@ Adds 100 general documents and 100 distinct pre-2015 ML-paper excerpts for each 
 
 GPT writers used Codex subscription authentication with requested IDs `gpt-6.1-sol` and `gpt-6-luna`, and explicit low reasoning effort. The CLI did not report the served model: `reported_model=null`, `model_identity_status="requested_only"`. No served checkpoint is inferred. Briefs still use Haiku, as in previous cohorts. New paper excerpts require at least five continuous clean prose paragraphs, with at most 65% of source characters replaced; the same 3/4/6-paragraph blocks, brief bottleneck and 15% source-copy ceiling apply.
 
-All {{PREVIOUS_RECORD_COUNT}} previous full records are preserved exactly, including IDs, source/generated text, prompts and split assignments. `ml_papers_mixed` now includes both the earlier and GPT paper cohorts; `gpt_ml_papers_mixed` isolates the added 200 papers.''' if has_gpt else ''
+The v1.2.0 release preserved its 2,000 earlier full records exactly, including IDs, source/generated text, prompts and split assignments. `ml_papers_mixed` includes the earlier and GPT paper cohorts; `gpt_ml_papers_mixed` isolates these 200 papers.''' if has_gpt else ''
+    overnight_records=[r for r in mixed if cohort_names[r['construction']['plan_id']] in overnight]
+    overnight_ml=sum(r['source']['dataset']=='jmlr_pre2015' for r in overnight_records)
+    overnight_counts=Counter(r['replacements'][0]['generation']['provenance']['backend'] for r in overnight_records)
+    overnight_section=''
+    if overnight:
+        profiles=[]
+        for name in overnight:
+            settings=json.loads((runs[name]/'plan.json').read_text())['config']['dataset']
+            profiles.append(f'| `{name}` | '+', '.join(map(str,settings['block_sizes']))+f' | {settings["max_blocks"]} | {settings["max_replaced_fraction"]:.0%} | {settings["summary_min_sentences"]}–{settings["summary_max_sentences"]} | {settings["context_chars"]} |')
+        overnight_section=f'''### Version {version}: completed overnight batches
+
+Adds **{len(overnight_records):,} mixed documents and {len(overnight_records):,} matched controls** from {len(overnight)} completed, audited batches. Each of Haiku, Sonnet, current Opus, GPT-6.1 Sol and GPT-6 Luna contributes {overnight_counts['haiku']} new documents; no new Opus 3 examples are included. The additions comprise {overnight_ml:,} pre-2015 ML excerpts and {len(overnight_records)-overnight_ml:,} general passages. General passages are predominantly historical fiction, supplemented by two historical Hansard excerpts. Current Opus uses fiction only; the other four writers each receive equal ML/general quotas.
+
+All **{preserved_previous:,} full records from v1.2.0 are preserved exactly**. `overnight_mixed` isolates these additions; individual `overnight_batch_01_mixed` etc. configurations isolate each parameter profile. Only completed batches are included; the remaining generation campaign is separate from this release.
+
+| Cohort | Paragraphs per block | Maximum blocks | Source replacement cap | Brief sentences | Context characters |
+|---|---|---:|---:|---:|---:|
+'''+ '\n'.join(profiles)+'''
+
+These are selection limits; actual replacement counts and lengths are in each record. Context uses complete retained paragraphs, so its character budget is soft. ML excerpts contain three continuous eligible paragraphs; multiple disjoint excerpts can come from the same paper. Previously selected paragraph ranges are excluded, and paper/author groups retain one split across old and new cohorts. New books are checked against the archive's title/author header and pinned raw bytes.
+
+Three complete mixed documents per writer per new batch were read (45 documents); six rendered original PDF pages were compared with the corresponding excerpts. Mechanical span/provenance/copy audits cover every released replacement. The `et al.` sentence-counting bug was corrected during the third batch; accepted prompts and model responses remain in the full records.
+'''
     substitutions={
         '{{REPO_ID}}':repo_id,'{{VERSION}}':version,'{{TOTAL}}':str(total),
         '{{RECORD_TOTAL}}':str(len(records)),'{{SPAN_TOTAL}}':str(span_total),
@@ -268,9 +294,13 @@ All {{PREVIOUS_RECORD_COUNT}} previous full records are preserved exactly, inclu
         '{{PREVIOUS_RECORD_COUNT}}':str(preserved_previous),
         '{{GENERATION_BACKENDS}}':'Claude models ran through Claude Code subscription authentication; GPT writers ran through Codex subscription authentication, retaining requested-only attribution when served identity was unreported; Opus 3 ran through the browser UI. No OpenRouter/open-weight generations are included.' if has_gpt else 'Modern Claude models ran through Claude Code subscription authentication; Opus 3 ran through the browser UI. No GPT/OpenRouter/open-weight generations are included.',
         '{{GPT_EXPANSION_SECTION}}':gpt_section.replace('{{PREVIOUS_RECORD_COUNT}}',str(preserved_previous)),
-        '{{ADDITIONAL_CONFIG_EXAMPLES}}':f'gpt_general = load_dataset("{repo_id}", "gpt_general_mixed")\ngpt_papers = load_dataset("{repo_id}", "gpt_ml_papers_mixed")' if has_gpt else '',
-        '{{ML_EXTRACTION_PARAGRAPHS}}':'The original paper cohort requires at least six continuous usable prose paragraphs; the GPT paper cohort requires at least five.' if has_gpt else 'Papers had to yield a continuous sequence of at least six usable prose paragraphs.',
-        '{{PDF_REVIEW_DESCRIPTION}}':'Five actual PDF-page renders were checked for the original paper cohort, and five additional pages for the GPT paper cohort.' if has_gpt else 'Five actual paper PDF-page renders were compared with extraction.',
+        '{{OVERNIGHT_EXPANSION_SECTION}}':overnight_section,
+        '{{ADDITIONAL_CONFIG_EXAMPLES}}':(f'gpt_general = load_dataset("{repo_id}", "gpt_general_mixed")\ngpt_papers = load_dataset("{repo_id}", "gpt_ml_papers_mixed")' if has_gpt else '')+(f'\novernight = load_dataset("{repo_id}", "overnight_mixed")' if overnight else ''),
+        '{{ML_EXTRACTION_PARAGRAPHS}}':('The original paper cohort requires at least six continuous usable prose paragraphs; the GPT paper cohort requires at least five.' if has_gpt else 'Papers had to yield a continuous sequence of at least six usable prose paragraphs.')+(' The new overnight cohorts use three continuous eligible paragraphs per excerpt.' if overnight else ''),
+        '{{MANUAL_REVIEW_DESCRIPTION}}':('Earlier modern-model cohorts reviewed five outputs per participating writer. Each released overnight batch reviewed three complete documents per writer.' if overnight else 'Five outputs per participating modern writer were reviewed in each cohort.'),
+        '{{PDF_REVIEW_DESCRIPTION}}':('Five actual PDF-page renders were checked for the original paper cohort, and five additional pages for the GPT paper cohort.' if has_gpt else 'Five actual paper PDF-page renders were compared with extraction.')+(f' Two additional pages were inspected for each of the {len(overnight)} released overnight batches.' if overnight else ''),
+        '{{NEW_SOURCE_ROWS}}':f'| Historical UK Hansard | {source_counts["hansard"]} | Retained parliamentary/source provenance, source date and pinned parent-text/release hashes. |' if source_counts['hansard'] else '',
+        '{{BLOCK_SELECTION_DESCRIPTION}}':'Earlier cohorts choose 3, 4 or 6 source paragraphs per block; overnight cohorts vary block sizes from 2–6 paragraphs, with one or two replacements and 55–65% source-character caps.' if overnight else 'Choose whole blocks of 3, 4 or 6 source paragraphs using a seeded random plan, retaining surrounding human text. A document may contain one or two replacement blocks.',
         '{{SPLIT_TABLE}}':'\n'.join(f'| `{c}` | {v["train"]} | {v["validation"]} | {v["test"]} | {sum(v.values())} |' for c,v in split_counts.items()),
         **{f'{{{{COUNT_{k}}}}}':str(v) for k,v in source_counts.items()},
     }

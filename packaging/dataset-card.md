@@ -45,6 +45,8 @@ The redundant **`source_text_sha256` Parquet column has been removed from every 
 
 {{GPT_EXPANSION_SECTION}}
 
+{{OVERNIGHT_EXPANSION_SECTION}}
+
 ## Hugging Face configurations and splits
 
 `mixed` is the default. All configurations use the same documented Parquet schema and preserve their original split assignments.
@@ -75,14 +77,15 @@ For a fixed snapshot, add `revision="v{{VERSION}}"` to `load_dataset`. The origi
 | WikiText-2 raw | {{COUNT_wikitext2_raw}} | The 2016 Wikipedia-derived release, retained raw Parquet/article hashes and mechanical punctuation restoration. Individual article revision IDs are unavailable. |
 | Federal Reserve Beige Book | {{COUNT_beigebook}} | Dated official narratives and saved source hashes; capture-version dates are not independently certified. |
 | JMLR, 2000–2014 | {{COUNT_jmlr_pre2015}} | Publication year agrees between the journal index and PDF; original PDF/layout/index hashes, authors and paragraph locations are retained. |
+{{NEW_SOURCE_ROWS}}
 
 The ML sample was selected with a seeded shuffle from JMLR volumes 1–15. {{ML_EXTRACTION_PARAGRAPHS}} Selection does not join separate eligible runs across rejected paragraphs. Extraction used Poppler rather than a language model, with recorded line joining, dehyphenation and normalization. Heuristic paragraphs can include a figure caption joined to nearby narrative, and inline mathematical notation loses some visual layout; source coordinates and the visual-review findings retain these artifacts. Selection therefore favors PDFs with usable narrative extraction; it is not a representative sample of all ML papers. Human-only source material was drawn from the upstream documented collections, not accepted on the strength of a detector score.
 
-The historical-fiction/reference/finance source collection was pinned to upstream repository revision `b618ca42b85fcb4cd8ddcc60cf18ed957262cd6a`. The generation plans and selection details are recorded in [provenance](provenance); original source excerpts and metadata are in [sources/originals.jsonl](sources/originals.jsonl).
+The earlier historical-fiction/reference/finance source collection was pinned to upstream repository revision `b618ca42b85fcb4cd8ddcc60cf18ed957262cd6a`; subsequently acquired sources retain their own acquisition evidence and hashes. The generation plans and selection details are recorded in [provenance](provenance); original source excerpts and metadata are in [sources/originals.jsonl](sources/originals.jsonl).
 
 ## How mixed documents were made
 
-1. Choose whole blocks of 3, 4 or 6 source paragraphs using a seeded random plan, retaining surrounding human text. A document may contain one or two replacement blocks.
+1. {{BLOCK_SELECTION_DESCRIPTION}}
 2. Condense each selected block into **2–3 complete sentences**, using Haiku. This is a multi-paragraph content brief, not a short list of keywords.
 3. Give the assigned writer the brief plus bounded neighboring context, excluding the selected original blocks. Ask it to expand the brief into document prose.
 4. Splice the generated text into the original source and construct an exact, contiguous span partition with retained-source and replacement coordinates.
@@ -95,7 +98,7 @@ Successful generations were cached. Failed quality attempts were retried; the ex
 - All {{RECORD_TOTAL}} release records pass the full JSON Schema and exact reconstruction/span checks. Text and prompt content are unchanged by packaging.
 - All {{SPAN_TOTAL}} AI replacement blocks passed the configured source-copy checks, including checks against the full own-parent text rather than only the excerpt. The check uses normalized exact 8-gram coverage with a 15% ceiling. This is **not an Internet-wide plagiarism check** and cannot prove that every generated sentence is novel.
 - Final audits report no missing planned documents or outstanding prose-review flags.
-- Five outputs per participating modern writer were reviewed in each cohort. {{PDF_REVIEW_DESCRIPTION}} The full dataset was not manually reviewed sentence by sentence.
+- {{MANUAL_REVIEW_DESCRIPTION}} {{PDF_REVIEW_DESCRIPTION}} The full dataset was not manually reviewed sentence by sentence.
 - Two cached Opus 3 passages that substantially copied other chapters of their source books were quarantined and replaced. The final export contains their accepted replacements; the quality history is retained in the original-cohort quarantine report.
 - Factual/causal fidelity, exact output length and exact paragraph count are **not** acceptance requirements. The objective is usable, correctly attributed text for a detector; rewritten paper passages are not reliable accounts of the original research.
 

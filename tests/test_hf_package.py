@@ -63,3 +63,17 @@ def test_gpt_subsets_keep_requested_identity_and_include_papers_in_paper_view(tm
     assert matches(loaded,f'{cohort}_mixed')
     assert matches(loaded,'ml_papers_mixed')==(cohort=='gpt_ml_papers')
     assert not matches(loaded,'original_mixed') and not matches(loaded,'expansion_mixed')
+
+
+@pytest.mark.parametrize('cohort',['overnight_batch_01','overnight_batch_02','overnight_batch_03'])
+def test_overnight_configurations_preserve_cohort_and_paper_membership(cohort):
+    original=fixture(True)
+    original['source']['dataset']='jmlr_pre2015'
+    row=flat_record(original,{'fixture-plan':cohort})
+    assert matches(row,'overnight_mixed') and matches(row,f'{cohort}_mixed')
+    assert matches(row,'ml_papers_mixed') and matches(row,'mixed')
+    assert not matches(row,'original_mixed') and not matches(row,'gpt_ml_papers_mixed')
+    other='overnight_batch_02' if cohort=='overnight_batch_01' else 'overnight_batch_01'
+    assert not matches(row,f'{other}_mixed')
+    control=flat_record(fixture(False),{'fixture-plan':cohort})
+    assert not matches(control,'overnight_mixed') and not matches(control,f'{cohort}_mixed')
