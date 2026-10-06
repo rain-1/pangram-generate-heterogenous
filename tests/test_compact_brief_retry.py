@@ -42,4 +42,10 @@ def test_author_citations_do_not_inflate_brief_sentence_count():
     ]
 
 
+def test_al_without_et_still_ends_a_sentence():
+    from heterogeneous.core import sentence_spans
 
+    text = 'We consulted Al. Results followed.'
+    assert [text[a:b] for a, b in sentence_spans(text)] == [
+        'We consulted Al.', 'Results followed.',
+    ]
