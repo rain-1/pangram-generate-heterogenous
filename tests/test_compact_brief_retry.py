@@ -28,3 +28,18 @@ def test_compact_retry_records_its_prompt_and_still_rejects_an_uncompressed_brie
     assert len(calls)==2
     assert runner.summary({'source_id':'fixture'},block)==accepted
     assert len(calls)==2
+def test_author_citations_do_not_inflate_brief_sentence_count():
+    from heterogeneous.core import sentence_spans
+
+    text = ('Ye et al. (2010) described a classifier based on call features. '
+            'It first finds candidates and then improves precision. '
+            'Dai et al. (2009) instead collected runtime features for classification.')
+    spans = sentence_spans(text)
+    assert [text[a:b] for a, b in spans] == [
+        'Ye et al. (2010) described a classifier based on call features.',
+        'It first finds candidates and then improves precision.',
+        'Dai et al. (2009) instead collected runtime features for classification.',
+    ]
+
+
+

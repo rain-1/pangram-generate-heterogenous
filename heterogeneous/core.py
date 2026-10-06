@@ -81,7 +81,8 @@ def sentence_spans(text: str) -> list[tuple[int, int]]:
         end = match.end()
         if match.group().startswith("."):
             token = re.search(r"([\w.]+)\.$", text[:match.start() + 1])
-            if token and (token[1].lower() in abbreviations or len(token[1]) == 1):
+            author_abbreviation = re.search(r"\bet\s+al\.$", text[:match.start() + 1], re.I)
+            if author_abbreviation or (token and (token[1].lower() in abbreviations or len(token[1]) == 1)):
                 continue
         boundaries.append(end)
     boundaries.append(len(text))
